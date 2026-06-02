@@ -32,6 +32,11 @@ class AdminDashboardScreen extends StatelessWidget {
             label: 'Support',
             onTap: () => context.push(AppRoutes.support),
           ),
+          _AdminTile(
+            icon: Icons.person_add_alt_1_outlined,
+            label: 'Create Staff',
+            onTap: () => context.push(AppRoutes.createStaff),
+          ),
         ],
       ),
     );

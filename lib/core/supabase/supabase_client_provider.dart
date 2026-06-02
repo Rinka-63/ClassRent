@@ -5,5 +5,5 @@ import '../config/app_env.dart';
 
 final supabaseClientProvider = Provider<SupabaseClient?>((ref) {
   if (!AppEnv.hasSupabaseConfig) return null;
-  return SupabaseClient(AppEnv.supabaseUrl, AppEnv.supabaseAnonKey);
+  return Supabase.instance.client;
 });

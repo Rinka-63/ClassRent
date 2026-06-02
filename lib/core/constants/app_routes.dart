@@ -4,6 +4,7 @@ class AppRoutes {
   static const splash = '/';
   static const login = '/login';
   static const home = '/home';
+  static const staff = '/staff';
   static const search = '/search';
   static const favorites = '/favorites';
   static const bookings = '/bookings';
@@ -14,6 +15,9 @@ class AppRoutes {
   static const support = '/support';
   static const roomDetail = '/rooms/:roomId';
   static const admin = '/admin';
+  static const adminPending = '/admin/pending';
+  static const createStaff = '/admin/staff/create';
+  static const superAdmin = '/super-admin';
   static const roomManagement = '/admin/rooms';
   static const bookingManagement = '/admin/bookings';
   static const unauthorized = '/unauthorized';

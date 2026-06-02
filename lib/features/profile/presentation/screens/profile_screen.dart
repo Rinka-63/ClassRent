@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/widgets/app_scaffold.dart';
@@ -31,6 +32,15 @@ class ProfileScreen extends ConsumerWidget {
           const ListTile(
             leading: Icon(Icons.privacy_tip_outlined),
             title: Text('Legal & Consent'),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () async {
+              await ref.read(authControllerProvider.notifier).logout();
+              if (context.mounted) context.go(AppRoutes.login);
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text('Logout'),
           ),
         ],
       ),
