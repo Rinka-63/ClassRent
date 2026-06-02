@@ -2,7 +2,10 @@ class SupabaseTables {
   const SupabaseTables._();
 
   static const users = 'users';
+  static const agencies = 'agencies';
   static const facilities = 'facilities';
+  static const agencyStaff = 'agency_staff';
+  static const staffRoomAssignments = 'staff_room_assignments';
   static const rooms = 'rooms';
   static const roomFacilities = 'room_facilities';
   static const roomImages = 'room_images';
