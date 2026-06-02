@@ -9,6 +9,9 @@ class AppUserDto extends AppUser {
     super.phone,
     super.avatarUrl,
     super.isVerified,
+    super.agencyId,
+    super.agencyStatus,
+    super.agencyIsActive,
   });
 
   factory AppUserDto.fromJson(Map<String, dynamic> json) {
@@ -20,6 +23,9 @@ class AppUserDto extends AppUser {
       avatarUrl: json['avatar_url'] as String?,
       role: UserRole.fromDb(json['role'] as String?),
       isVerified: json['is_verified'] as bool? ?? false,
+      agencyId: json['agency_id'] as String?,
+      agencyStatus: json['agency_status'] as String?,
+      agencyIsActive: json['agency_is_active'] as bool?,
     );
   }
 }

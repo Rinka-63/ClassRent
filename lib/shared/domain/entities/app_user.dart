@@ -28,6 +28,9 @@ class AppUser {
     this.phone,
     this.avatarUrl,
     this.isVerified = false,
+    this.agencyId,
+    this.agencyStatus,
+    this.agencyIsActive,
   });
 
   final String id;
@@ -37,4 +40,10 @@ class AppUser {
   final String? phone;
   final String? avatarUrl;
   final bool isVerified;
+  final String? agencyId;
+  final String? agencyStatus;
+  final bool? agencyIsActive;
+
+  bool get hasApprovedAgency =>
+      agencyStatus == 'approved' && agencyIsActive != false;
 }
