@@ -24,7 +24,7 @@ enum RegistrationType {
   agencyAdmin;
 
   String get metadataValue => switch (this) {
-        RegistrationType.user => 'user',
-        RegistrationType.agencyAdmin => 'agency_admin',
+      RegistrationType.user => 'user',
+      RegistrationType.agencyAdmin => 'agency_admin',
       };
 }

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_pending_approval_screen.dart';
+import '../../features/admin/presentation/screens/admin_history_screen.dart';
+import '../../features/admin/presentation/screens/admin_calendar_screen.dart';
 import '../../features/admin/presentation/screens/booking_management_screen.dart';
-import '../../features/admin/presentation/screens/create_staff_screen.dart';
+import '../../features/admin/presentation/screens/admin_reports_screen.dart';
 import '../../features/admin/presentation/screens/room_management_screen.dart';
 import '../../features/admin/presentation/screens/super_admin_dashboard_screen.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
@@ -19,7 +21,6 @@ import '../../features/payments/presentation/screens/payments_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/rooms/presentation/screens/room_detail_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
-import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
 import '../../features/support_tickets/presentation/screens/support_tickets_screen.dart';
 import '../../shared/domain/entities/app_user.dart';
 import '../constants/app_routes.dart';
@@ -45,22 +46,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path != AppRoutes.adminPending) {
         return AppRoutes.adminPending;
       }
-      if (role == UserRole.staff &&
-          user?.hasApprovedAgency == false &&
-          path != AppRoutes.unauthorized) {
-        return AppRoutes.unauthorized;
-      }
       if (path == AppRoutes.adminPending &&
           (role != UserRole.admin || user?.hasApprovedAgency == true)) {
         return _landingPathFor(user);
       }
       if (path.startsWith('/admin') &&
-          role != UserRole.admin &&
-          role != UserRole.superAdmin) {
-        return AppRoutes.unauthorized;
-      }
-      if (path.startsWith('/staff') &&
-          role != UserRole.staff &&
           role != UserRole.admin &&
           role != UserRole.superAdmin) {
         return AppRoutes.unauthorized;
@@ -74,7 +64,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
       GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
       GoRoute(path: AppRoutes.home, builder: (_, __) => const HomeScreen()),
-      GoRoute(path: AppRoutes.staff, builder: (_, __) => const StaffDashboardScreen()),
       GoRoute(path: AppRoutes.search, builder: (_, __) => const SearchScreen()),
       GoRoute(
         path: AppRoutes.favorites,
@@ -109,12 +98,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.admin, builder: (_, __) => const AdminDashboardScreen()),
       GoRoute(
-        path: AppRoutes.adminPending,
-        builder: (_, __) => const AdminPendingApprovalScreen(),
+        path: AppRoutes.adminReports,
+        builder: (_, __) => const AdminReportsScreen(),
       ),
       GoRoute(
-        path: AppRoutes.createStaff,
-        builder: (_, __) => const CreateStaffScreen(),
+        path: AppRoutes.adminHistory,
+        builder: (_, __) => const AdminHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminCalendar,
+        builder: (_, __) => const AdminCalendarScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPending,
+        builder: (_, __) => const AdminPendingApprovalScreen(),
       ),
       GoRoute(
         path: AppRoutes.superAdmin,
@@ -138,7 +135,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 String _landingPathFor(AppUser? user) {
   return switch (user?.role ?? UserRole.user) {
-    UserRole.staff => AppRoutes.staff,
     UserRole.admin =>
       user?.hasApprovedAgency == true ? AppRoutes.admin : AppRoutes.adminPending,
     UserRole.superAdmin => AppRoutes.superAdmin,

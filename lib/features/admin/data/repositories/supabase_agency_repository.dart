@@ -1,5 +1,4 @@
 import 'package:fpdart/fpdart.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/constants/supabase_tables.dart';
 import '../../../../core/error/failure.dart';
@@ -99,57 +98,6 @@ class SupabaseAgencyRepository implements AgencyRepository {
     bool isActive,
   ) async {
     return _updateAgency(agencyId, {'is_active': isActive});
-  }
-
-  @override
-  Future<Either<Failure, Unit>> createStaff({
-    required String email,
-    required String password,
-    required String fullName,
-    required String agencyId,
-  }) async {
-    try {
-      await _service.requireClient.functions.invoke(
-        'create-staff',
-        body: {
-          'email': email.trim(),
-          'password': password,
-          'full_name': fullName.trim(),
-          'agency_id': agencyId,
-        },
-      );
-      return right(unit);
-    } on FunctionException catch (error) {
-      return left(_mapFunctionFailure(error));
-    } catch (error) {
-      return left(UnknownFailure(error.toString()));
-    }
-  }
-
-  Failure _mapFunctionFailure(FunctionException error) {
-    final details = error.details;
-    final detailMessage = details is Map
-        ? details['error']?.toString()
-        : details?.toString();
-
-    if (error.status == 404) {
-      return const NetworkFailure(
-        'Supabase Edge Function create-staff belum tersedia. Deploy atau serve function create-staff terlebih dahulu.',
-        code: 'edge_function_not_found',
-      );
-    }
-
-    if (error.status == 401 || error.status == 403) {
-      return PermissionFailure(
-        detailMessage ?? 'Agency belum disetujui atau akun tidak punya akses membuat staff.',
-        code: error.status.toString(),
-      );
-    }
-
-    return UnknownFailure(
-      detailMessage ?? 'Gagal membuat staff. Coba lagi nanti.',
-      code: error.status.toString(),
-    );
   }
 
   Future<Either<Failure, Unit>> _updateAgency(

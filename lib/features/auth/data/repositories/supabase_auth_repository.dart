@@ -168,26 +168,6 @@ class SupabaseAuthRepository implements AuthRepository {
       );
     }
 
-    if (role == UserRole.staff) {
-      final assignment = await _maybeSingle(
-        _service.requireClient
-            .from(SupabaseTables.agencyStaff)
-            .select('agency_id')
-            .eq('staff_id', userId)
-            .limit(1),
-      );
-      final agencyId = assignment?['agency_id'] as String?;
-      if (agencyId == null) return null;
-
-      return _maybeSingle(
-        _service.requireClient
-            .from(SupabaseTables.agencies)
-            .select('id,approval_status,is_active')
-            .eq('id', agencyId)
-            .limit(1),
-      );
-    }
-
     return null;
   }
 
