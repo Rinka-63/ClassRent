@@ -7,15 +7,13 @@ insert into auth.users (
 ) values
   ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'superadmin@classrent.test', crypt('ClassRent123!', gen_salt('bf')), now(), '{"full_name":"ClassRent Super Admin"}', now(), now()),
   ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@classrent.test', crypt('ClassRent123!', gen_salt('bf')), now(), '{"full_name":"Admin Gedung UNSRI"}', now(), now()),
-  ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'staff@classrent.test', crypt('ClassRent123!', gen_salt('bf')), now(), '{"full_name":"Staff Operasional"}', now(), now()),
   ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'user@classrent.test', crypt('ClassRent123!', gen_salt('bf')), now(), '{"full_name":"Mahasiswa Demo"}', now(), now())
 on conflict (id) do nothing;
 
 insert into public.users (id, email, full_name, phone, role, is_verified) values
-  ('00000000-0000-0000-0000-000000000001', 'superadmin@classrent.test', 'ClassRent Super Admin', '+628111111111', 'super_admin', true),
-  ('00000000-0000-0000-0000-000000000002', 'admin@classrent.test', 'Admin Gedung UNSRI', '+628122222222', 'admin', true),
-  ('00000000-0000-0000-0000-000000000003', 'staff@classrent.test', 'Staff Operasional', '+628133333333', 'staff', true),
-  ('00000000-0000-0000-0000-000000000004', 'user@classrent.test', 'Mahasiswa Demo', '+628144444444', 'user', true)
+  ('00000000-0000-0000-0000-000000000001', 'superadmin@classrent.test', 'ClassRent Super Admin', '+628111111111', 'SUPER_ADMIN', true),
+  ('00000000-0000-0000-0000-000000000002', 'admin@classrent.test', 'Admin Gedung UNSRI', '+628122222222', 'ADMIN', true),
+  ('00000000-0000-0000-0000-000000000004', 'user@classrent.test', 'Mahasiswa Demo', '+628144444444', 'USER', true)
 on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
 
 insert into public.facilities (id, admin_id, name, slug, address, city, lat, lng, description) values
@@ -61,11 +59,6 @@ insert into public.coupons (id, facility_id, code, name, description, discount_t
   ('40000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'FLAT50K', 'Potongan Rp50.000', 'Diskon fasilitas Gedung A untuk booking minimal Rp150.000.', 'fixed_amount', 50000, null, 150000, 50, 1, now() - interval '1 day', now() + interval '90 days', '00000000-0000-0000-0000-000000000002'),
   ('40000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 'FREE1HR', 'Gratis 1 Jam', 'Promo satu jam gratis untuk kelas dan meeting room.', 'free_hours', 1, null, 120000, 25, 1, now() - interval '1 day', now() + interval '60 days', '00000000-0000-0000-0000-000000000002')
 on conflict (id) do nothing;
-
-insert into public.staff_room_assignments (staff_id, room_id, facility_id, assigned_by) values
-  ('00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002'),
-  ('00000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002')
-on conflict do nothing;
 
 insert into public.blackout_dates (id, facility_id, title, start_date, end_date, is_recurring, scope, created_by) values
   ('50000000-0000-0000-0000-000000000001', null, 'Libur Nasional Tahun Baru', '2026-01-01', '2026-01-01', true, 'platform', '00000000-0000-0000-0000-000000000001'),
