@@ -448,7 +448,6 @@ class _UsersTab extends ConsumerWidget {
         final grouped = <UserRole, List<PlatformUser>>{
           UserRole.superAdmin: [],
           UserRole.admin: [],
-          UserRole.staff: [],
           UserRole.user: [],
         };
         for (final user in users) {
@@ -483,7 +482,6 @@ class _UsersTab extends ConsumerWidget {
     return switch (role) {
       UserRole.superAdmin => 'Super Admin',
       UserRole.admin => 'Agency Admin',
-      UserRole.staff => 'Staff',
       UserRole.user => 'Users',
     };
   }

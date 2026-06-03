@@ -46,4 +46,28 @@ class RoomDto extends Room {
       address: json['address'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'facility_id': facilityId,
+      'admin_id': adminId,
+      'name': name,
+      'description': description,
+      'room_type': roomType,
+      'capacity': capacity,
+      'area_sqm': areaSqm,
+      'hourly_rate': hourlyRate,
+      'daily_rate': dailyRate,
+      'dp_percentage': dpPercentage,
+      'minimum_hours': minimumHours,
+      'buffer_minutes': bufferMinutes,
+      'requires_approval': requiresApproval,
+      'avg_rating': avgRating,
+      'review_count': reviewCount,
+      'is_active': isActive,
+      'city': city,
+      'address': address,
+    };
+  }
 }
