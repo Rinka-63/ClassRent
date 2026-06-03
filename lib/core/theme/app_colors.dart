@@ -16,5 +16,6 @@ class AppColors {
   static const onPrimary = Color(0xffffffff);
   static const secondary = Color(0xff00687b);
   static const secondaryContainer = Color(0xff50dcff);
+  static const tertiary = Color(0xff7b2600);
   static const error = Color(0xffba1a1a);
 }
