@@ -28,6 +28,7 @@ class AppUser {
     this.agencyId,
     this.agencyStatus,
     this.agencyIsActive,
+    this.deletedAt,
   });
 
   final String id;
@@ -40,7 +41,10 @@ class AppUser {
   final String? agencyId;
   final String? agencyStatus;
   final bool? agencyIsActive;
+  final DateTime? deletedAt;
 
   bool get hasApprovedAgency =>
       agencyStatus == 'approved' && agencyIsActive != false;
+
+  bool get isSuspended => deletedAt != null;
 }

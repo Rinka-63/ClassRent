@@ -3,6 +3,9 @@ sealed class Failure {
 
   final String message;
   final String? code;
+
+  @override
+  String toString() => code == null ? message : '$code: $message';
 }
 
 class NetworkFailure extends Failure {
