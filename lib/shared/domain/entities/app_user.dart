@@ -1,21 +1,18 @@
 enum UserRole {
   user,
-  staff,
   admin,
   superAdmin;
 
   static UserRole fromDb(String? value) => switch (value) {
-        'staff' => UserRole.staff,
-        'admin' => UserRole.admin,
-        'super_admin' => UserRole.superAdmin,
+        'ADMIN' || 'admin' => UserRole.admin,
+        'SUPER_ADMIN' || 'super_admin' => UserRole.superAdmin,
         _ => UserRole.user,
       };
 
   String get dbValue => switch (this) {
         UserRole.user => 'user',
-        UserRole.staff => 'staff',
-        UserRole.admin => 'admin',
-        UserRole.superAdmin => 'super_admin',
+        UserRole.admin => 'ADMIN',
+        UserRole.superAdmin => 'SUPER_ADMIN',
       };
 }
 
@@ -31,6 +28,7 @@ class AppUser {
     this.agencyId,
     this.agencyStatus,
     this.agencyIsActive,
+    this.deletedAt,
   });
 
   final String id;
@@ -43,7 +41,10 @@ class AppUser {
   final String? agencyId;
   final String? agencyStatus;
   final bool? agencyIsActive;
+  final DateTime? deletedAt;
 
   bool get hasApprovedAgency =>
       agencyStatus == 'approved' && agencyIsActive != false;
+
+  bool get isSuspended => deletedAt != null;
 }
