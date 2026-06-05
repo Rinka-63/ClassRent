@@ -407,7 +407,7 @@ class _BookingsTab extends ConsumerWidget {
               onConfirm: () async {
                 await ref.read(bookingRepositoryProvider).updateBooking(
                   booking.id,
-                  {'status': 'confirmed'},
+                  {'status': 'approved'},
                 );
                 ref.invalidate(roomBookingsProvider(roomId));
               },
@@ -451,9 +451,9 @@ class _BookingRow extends StatelessWidget {
             Text('Status: ${booking.status}'),
             if (isAdmin) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  FilledButton(onPressed: onConfirm, child: const Text('Confirm')),
+                Row(
+                  children: [
+                  FilledButton(onPressed: onConfirm, child: const Text('Approve')),
                   const SizedBox(width: 8),
                   OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
                 ],

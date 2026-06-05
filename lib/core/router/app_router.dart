@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_pending_approval_screen.dart';
 import '../../features/admin/presentation/screens/admin_history_screen.dart';
+import '../../features/admin/presentation/screens/audit_log_detail_screen.dart';
 import '../../features/admin/presentation/screens/admin_calendar_screen.dart';
 import '../../features/admin/presentation/screens/booking_management_screen.dart';
 import '../../features/admin/presentation/screens/admin_reports_screen.dart';
 import '../../features/admin/presentation/screens/room_management_screen.dart';
+import '../../features/admin/presentation/screens/super_admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/super_admin_dashboard_screen.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -106,6 +108,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const AdminHistoryScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminAuditDetail,
+        builder: (_, state) => AuditLogDetailScreen(
+          auditId: state.pathParameters['auditId']!,
+        ),
+      ),
+      GoRoute(
         path: AppRoutes.adminCalendar,
         builder: (_, __) => const AdminCalendarScreen(),
       ),
@@ -116,6 +124,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.superAdmin,
         builder: (_, __) => const SuperAdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.superAdminSettings,
+        builder: (_, __) => const SuperAdminSettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.roomManagement,

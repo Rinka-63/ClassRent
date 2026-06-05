@@ -42,4 +42,44 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get dark {
+    final colorScheme = ColorScheme.fromSeed(
+      brightness: Brightness.dark,
+      seedColor: AppColors.primaryContainer,
+      primary: AppColors.secondaryContainer,
+      secondary: AppColors.secondaryContainer,
+      error: AppColors.error,
+      surface: const Color(0xff121418),
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: const Color(0xff0f1115),
+      fontFamily: 'Inter',
+      cardTheme: CardThemeData(
+        color: const Color(0xff171a21),
+        elevation: 1,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xff171a21),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.secondaryContainer, width: 2),
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: const Color(0xff171a21),
+        selectedItemColor: AppColors.secondaryContainer,
+        unselectedItemColor: Colors.white70,
+        type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
 }
