@@ -28,7 +28,12 @@ class BookingFlowScreen extends ConsumerWidget {
             FilledButton(
               onPressed: () {
                 if (state.step == BookingStep.payment) {
-                  context.push(AppRoutes.payments);
+                  final bookingId = state.createdBookingId;
+                  if (bookingId == null || bookingId.isEmpty) {
+                    context.push(AppRoutes.payments);
+                    return;
+                  }
+                  context.push(AppRoutes.paymentCheckoutPath(bookingId));
                   return;
                 }
                 final nextIndex = (state.step.index + 1).clamp(0, BookingStep.values.length - 1);

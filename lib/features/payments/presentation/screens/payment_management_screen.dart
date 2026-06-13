@@ -17,6 +17,7 @@ class PaymentManagementScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final paymentsValue = ref.watch(agencyPaymentsProvider);
+    final selectedStatus = ref.watch(adminPaymentStatusFilterProvider);
 
     return AppScaffold(
       title: 'Payment Management',
@@ -44,6 +45,8 @@ class PaymentManagementScreen extends ConsumerWidget {
                       color: AppColors.onSurfaceVariant,
                     ),
               ),
+              const SizedBox(height: 16),
+              _StatusFilter(selectedStatus: selectedStatus),
               const SizedBox(height: 16),
               _StatsGrid(stats: stats),
               const SizedBox(height: 16),
@@ -78,13 +81,13 @@ class _PaymentStats {
     return _PaymentStats(
       pending:
           payments.where((payment) => payment.status == PaymentStatus.pending).length,
-      paid: payments.where((payment) => payment.status == PaymentStatus.paid).length,
+      paid: payments.where((payment) => payment.status == PaymentStatus.settlement).length,
       failed:
-          payments.where((payment) => payment.status == PaymentStatus.failed).length,
+          payments.where((payment) => payment.status == PaymentStatus.failure).length,
       totalAmount: payments.fold<double>(
         0,
         (total, payment) =>
-            payment.status == PaymentStatus.paid ? total + payment.amount : total,
+            payment.status == PaymentStatus.settlement ? total + payment.amount : total,
       ),
     );
   }
@@ -93,6 +96,45 @@ class _PaymentStats {
   final int paid;
   final int failed;
   final double totalAmount;
+}
+
+class _StatusFilter extends ConsumerWidget {
+  const _StatusFilter({required this.selectedStatus});
+
+  final String? selectedStatus;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const statuses = [
+      null,
+      'pending',
+      'settlement',
+      'cancel',
+      'expire',
+      'failure',
+    ];
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: statuses.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, index) {
+          final status = statuses[index];
+          final selected = status == selectedStatus;
+          return ChoiceChip(
+            selected: selected,
+            label: Text(status == null ? 'All' : status),
+            onSelected: (_) {
+              ref.read(adminPaymentStatusFilterProvider.notifier).state = status;
+              ref.invalidate(agencyPaymentsProvider);
+            },
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _StatsGrid extends StatelessWidget {
@@ -173,7 +215,8 @@ class _AdminPaymentCard extends StatelessWidget {
       child: ListTile(
         leading: const Icon(Icons.payments_outlined),
         title: Text(formatPaymentAmount(payment.amount)),
-        subtitle: Text('Booking ${payment.bookingId}'),
+        subtitle: Text('${payment.orderId ?? payment.bookingId}\n${formatPaymentDate(payment.createdAt)}'),
+        isThreeLine: true,
         trailing: PaymentStatusChip(status: payment.status),
         onTap: () => context.push(AppRoutes.adminPaymentDetailPath(payment.id)),
       ),

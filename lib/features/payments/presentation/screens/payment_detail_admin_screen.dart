@@ -50,20 +50,33 @@ class PaymentDetailAdminScreen extends ConsumerWidget {
                     PaymentInfoRow(label: 'Booking ID', value: payment.bookingId),
                     PaymentInfoRow(label: 'User ID', value: payment.userId),
                     PaymentInfoRow(
-                      label: 'Agency ID',
-                      value: payment.agencyId ?? '-',
-                    ),
-                    PaymentInfoRow(
-                      label: 'Midtrans Order',
-                      value: payment.midtransOrderId ?? '-',
+                      label: 'Order ID',
+                      value: payment.orderId ?? '-',
                     ),
                     PaymentInfoRow(
                       label: 'Transaction ID',
-                      value: payment.midtransTransactionId ?? '-',
+                      value: payment.transactionId ?? '-',
                     ),
                     PaymentInfoRow(
-                      label: 'Method',
+                      label: 'Gross amount',
+                      value: formatPaymentAmount(payment.grossAmount),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Payment method',
                       value: payment.paymentMethod ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Payment type',
+                      value: payment.paymentType ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Status',
+                      value: payment.transactionStatus.value,
+                    ),
+                    PaymentInfoRow(label: 'Snap token', value: payment.snapToken ?? '-'),
+                    PaymentInfoRow(
+                      label: 'Snap redirect',
+                      value: payment.snapRedirectUrl ?? '-',
                     ),
                     PaymentInfoRow(
                       label: 'Created at',
@@ -74,8 +87,16 @@ class PaymentDetailAdminScreen extends ConsumerWidget {
                       value: formatPaymentDate(payment.expiredAt),
                     ),
                     PaymentInfoRow(
-                      label: 'Settlement',
-                      value: formatPaymentDate(payment.settlementTime),
+                      label: 'Paid at',
+                      value: formatPaymentDate(payment.paidAt),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Updated at',
+                      value: formatPaymentDate(payment.updatedAt),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Midtrans response',
+                      value: payment.midtransResponse?.toString() ?? '-',
                     ),
                   ],
                 ),

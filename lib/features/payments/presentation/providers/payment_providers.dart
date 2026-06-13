@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/supabase/supabase_client_provider.dart';
+import '../../../../core/supabase/supabase_service.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../data/repositories/unconfigured_payment_repository.dart';
+import '../../../booking/domain/repositories/booking_repository.dart';
+import '../../../booking/presentation/providers/booking_admin_providers.dart';
+import '../../data/repositories/supabase_payment_repository.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/repositories/payment_repository.dart';
 
@@ -31,19 +35,40 @@ class PaymentActionState {
   }
 }
 
-final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
-  return const UnconfiguredPaymentRepository();
+final createPaymentLoadingProvider = Provider<bool>((ref) {
+  return ref.watch(paymentControllerProvider).isLoading;
 });
+
+final createPaymentErrorProvider = Provider<String?>((ref) {
+  return ref.watch(paymentControllerProvider).errorMessage;
+});
+
+final createdPaymentProvider = Provider<Payment?>((ref) {
+  return ref.watch(paymentControllerProvider).payment;
+});
+
+final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
+  return SupabasePaymentRepository(
+    SupabaseService(ref.watch(supabaseClientProvider)),
+  );
+});
+
+final adminPaymentStatusFilterProvider = StateProvider<String?>((ref) => null);
 
 final paymentControllerProvider =
     StateNotifierProvider<PaymentController, PaymentActionState>((ref) {
-  return PaymentController(ref.watch(paymentRepositoryProvider));
+  return PaymentController(
+    ref.watch(paymentRepositoryProvider),
+    ref.watch(bookingRepositoryProvider),
+  );
 });
 
 class PaymentController extends StateNotifier<PaymentActionState> {
-  PaymentController(this._repository) : super(const PaymentActionState());
+  PaymentController(this._repository, this._bookingRepository)
+      : super(const PaymentActionState());
 
   final PaymentRepository _repository;
+  final BookingRepository _bookingRepository;
 
   Future<bool> createPayment(PaymentRequest request) async {
     state = state.copyWith(
@@ -68,10 +93,38 @@ class PaymentController extends StateNotifier<PaymentActionState> {
     );
   }
 
-  Future<bool> cancelPayment(String paymentId) async {
+  Future<bool> createPaymentForBooking(String bookingId) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
-    final result = await _repository.cancelPayment(paymentId);
+    final bookingResult = await _bookingRepository.getBookingById(bookingId);
+    return bookingResult.match(
+      (failure) async {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: failure.message,
+        );
+        return false;
+      },
+      (booking) async {
+        final request = PaymentRequest(
+          bookingId: booking.id,
+          userId: booking.userId,
+          grossAmount: booking.finalPrice,
+          expiredAt: DateTime.now().add(const Duration(minutes: 15)),
+        );
+        return createPayment(request);
+      },
+    );
+  }
+
+  Future<bool> createMidtransPayment(String bookingId) async {
+    state = state.copyWith(
+      isLoading: true,
+      clearPayment: true,
+      clearError: true,
+    );
+
+    final result = await _repository.createMidtransPayment(bookingId);
     return result.match(
       (failure) {
         state = state.copyWith(
@@ -80,8 +133,34 @@ class PaymentController extends StateNotifier<PaymentActionState> {
         );
         return false;
       },
-      (_) {
-        state = state.copyWith(isLoading: false);
+      (payment) {
+        state = PaymentActionState(payment: payment);
+        return true;
+      },
+    );
+  }
+
+  Future<bool> updatePaymentStatus({
+    required String paymentId,
+    required PaymentStatus status,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    final result = await _repository.updatePaymentStatus(
+      paymentId: paymentId,
+      status: status,
+      paidAt: status == PaymentStatus.settlement ? DateTime.now() : null,
+    );
+    return result.match(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: failure.message,
+        );
+        return false;
+      },
+      (payment) {
+        state = PaymentActionState(payment: payment);
         return true;
       },
     );
@@ -93,7 +172,7 @@ final paymentHistoryProvider = FutureProvider<List<Payment>>((ref) async {
   if (user == null) return const [];
 
   final result =
-      await ref.watch(paymentRepositoryProvider).getPaymentHistory(user.id);
+      await ref.watch(paymentRepositoryProvider).getPaymentsByUser(user.id);
   return result.match((failure) => throw failure, (payments) => payments);
 });
 
@@ -104,18 +183,26 @@ final paymentDetailProvider =
   return result.match((failure) => throw failure, (payment) => payment);
 });
 
-final paymentByBookingProvider =
-    FutureProvider.family<Payment, String>((ref, bookingId) async {
+final paymentsByBookingProvider =
+    FutureProvider.family<List<Payment>, String>((ref, bookingId) async {
   final result =
-      await ref.watch(paymentRepositoryProvider).getPaymentByBookingId(bookingId);
+      await ref.watch(paymentRepositoryProvider).getPaymentsByBooking(bookingId);
+  return result.match((failure) => throw failure, (payments) => payments);
+});
+
+final latestPaymentByBookingProvider =
+    FutureProvider.family<Payment?, String>((ref, bookingId) async {
+  final result =
+      await ref.watch(paymentRepositoryProvider).getLatestPaymentByBooking(bookingId);
   return result.match((failure) => throw failure, (payment) => payment);
 });
 
 final agencyPaymentsProvider = FutureProvider<List<Payment>>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return const [];
+  if (ref.watch(currentUserProvider) == null) return const [];
+  final status = ref.watch(adminPaymentStatusFilterProvider);
 
-  final result =
-      await ref.watch(paymentRepositoryProvider).getAgencyPayments(user.id);
+  final result = await ref.watch(paymentRepositoryProvider).getAllPaymentsForAdmin(
+        status: status,
+      );
   return result.match((failure) => throw failure, (payments) => payments);
 });

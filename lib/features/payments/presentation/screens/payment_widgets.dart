@@ -20,20 +20,26 @@ String formatPaymentDate(DateTime? date) {
 String paymentStatusLabel(PaymentStatus status) {
   return switch (status) {
     PaymentStatus.pending => 'Pending',
-    PaymentStatus.paid => 'Paid',
-    PaymentStatus.failed => 'Failed',
-    PaymentStatus.expired => 'Expired',
-    PaymentStatus.cancelled => 'Cancelled',
+    PaymentStatus.capture => 'Capture',
+    PaymentStatus.settlement => 'Settlement',
+    PaymentStatus.deny => 'Deny',
+    PaymentStatus.cancel => 'Cancel',
+    PaymentStatus.expire => 'Expire',
+    PaymentStatus.failure => 'Failure',
+    PaymentStatus.refund => 'Refund',
   };
 }
 
 Color paymentStatusColor(PaymentStatus status) {
   return switch (status) {
     PaymentStatus.pending => AppColors.primaryContainer,
-    PaymentStatus.paid => AppColors.secondary,
-    PaymentStatus.failed => AppColors.error,
-    PaymentStatus.expired => AppColors.outline,
-    PaymentStatus.cancelled => AppColors.tertiary,
+    PaymentStatus.capture => AppColors.secondary,
+    PaymentStatus.settlement => AppColors.secondary,
+    PaymentStatus.deny => AppColors.error,
+    PaymentStatus.cancel => AppColors.tertiary,
+    PaymentStatus.expire => AppColors.outline,
+    PaymentStatus.failure => AppColors.error,
+    PaymentStatus.refund => AppColors.primary,
   };
 }
 
