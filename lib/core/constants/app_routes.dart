@@ -17,8 +17,10 @@ class AppRoutes {
   static const adminPending = '/admin/pending';
   static const adminReports = '/admin/reports';
   static const adminHistory = '/admin/history';
+  static const adminAuditDetail = '/admin/history/:auditId';
   static const adminCalendar = '/admin/calendar';
   static const superAdmin = '/super-admin';
+  static const superAdminSettings = '/super-admin/settings';
   static const roomManagement = '/admin/rooms';
   static const bookingManagement = '/admin/bookings';
   static const unauthorized = '/unauthorized';

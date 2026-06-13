@@ -14,4 +14,5 @@ class SupabaseTables {
   static const userFavorites = 'user_favorites';
   static const supportTickets = 'support_tickets';
   static const ticketMessages = 'ticket_messages';
+  static const auditLogs = 'audit_logs';
 }

@@ -94,7 +94,7 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<AppUser> _loadUserProfile(String userId) async {
     var row = await _service.requireClient
         .from(SupabaseTables.users)
-        .select('id,email,full_name,phone,avatar_url,role,is_verified')
+        .select('id,email,full_name,phone,avatar_url,role,is_verified,deleted_at')
         .eq('id', userId)
         .single();
     var agency = await _loadUserAgency(row);
@@ -107,10 +107,14 @@ class SupabaseAuthRepository implements AuthRepository {
       );
       row = await _service.requireClient
           .from(SupabaseTables.users)
-          .select('id,email,full_name,phone,avatar_url,role,is_verified')
+          .select('id,email,full_name,phone,avatar_url,role,is_verified,deleted_at')
           .eq('id', userId)
           .single();
       agency = await _loadUserAgency(row);
+    }
+
+    if (row['deleted_at'] != null) {
+      throw const AuthFailure('Account is suspended.');
     }
 
     return AppUserDto.fromJson({

@@ -98,7 +98,10 @@ class _BookingStats {
 
   factory _BookingStats.fromBookings(List<Booking> bookings) {
     final pending = bookings.where((booking) => booking.status.toLowerCase().contains('pending')).length;
-    final active = bookings.where((booking) => booking.status.toLowerCase().contains('confirm') || booking.status.toLowerCase().contains('check')).length;
+    final active = bookings.where((booking) {
+      final status = booking.status.toLowerCase();
+      return status.contains('approve') || status.contains('confirm') || status.contains('check');
+    }).length;
     final revenue = bookings.fold<double>(0, (sum, booking) => sum + booking.finalPrice);
     final occupied = bookings.isEmpty ? 0 : (active / bookings.length * 100).round();
 
@@ -185,7 +188,7 @@ class _BookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = switch (booking.status.toLowerCase()) {
-      'confirmed' => AppColors.secondary,
+      'confirmed' || 'approved' => AppColors.secondary,
       'pending_payment' || 'pending_approval' => AppColors.tertiary,
       'cancelled' => AppColors.error,
       _ => AppColors.primary,

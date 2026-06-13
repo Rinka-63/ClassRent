@@ -3,26 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/supabase_tables.dart';
 import '../../../../core/supabase/supabase_client_provider.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../domain/entities/audit_log_entry.dart';
 import '../../../rooms/domain/entities/room.dart';
 import '../../../rooms/data/dto/room_dto.dart';
-
-class AuditLogEntry {
-  const AuditLogEntry({
-    required this.id,
-    required this.action,
-    required this.entityType,
-    required this.createdAt,
-    this.actorId,
-    this.entityId,
-  });
-
-  final String id;
-  final String action;
-  final String entityType;
-  final String? actorId;
-  final String? entityId;
-  final DateTime createdAt;
-}
 
 final adminRoomsProvider = FutureProvider<List<Room>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
@@ -82,21 +65,29 @@ final adminHistoryProvider = FutureProvider<List<AuditLogEntry>>((ref) async {
   if (client == null || user == null) return const [];
 
   final rows = await client
-      .from('audit_logs')
-      .select('id,actor_id,action,entity_type,entity_id,created_at')
-      .eq('actor_id', user.id)
+      .from(SupabaseTables.auditLogs)
+      .select('id,actor_id,actor_name,actor_role,agency_id,agency_name,action,entity_type,entity_id,entity_name,description,old,new,created_at')
       .order('created_at', ascending: false)
-      .limit(20);
+      .limit(100);
 
   return rows
       .map(
         (row) => AuditLogEntry(
           id: row['id'] as String,
           actorId: row['actor_id'] as String?,
+          actorName: row['actor_name'] as String?,
+          actorRole: row['actor_role'] as String?,
+          agencyId: row['agency_id'] as String?,
+          agencyName: row['agency_name'] as String?,
           action: row['action'] as String,
           entityType: row['entity_type'] as String,
           entityId: row['entity_id'] as String?,
+          entityName: row['entity_name'] as String?,
           createdAt: DateTime.parse(row['created_at'].toString()),
+          summary: row['description'] as String? ?? '${row['action']} ${row['entity_type']}',
+          description: row['description'] as String? ?? '${row['action']} ${row['entity_type']}',
+          oldData: (row['old'] as Map?)?.cast<String, dynamic>(),
+          newData: (row['new'] as Map?)?.cast<String, dynamic>(),
         ),
       )
       .toList();

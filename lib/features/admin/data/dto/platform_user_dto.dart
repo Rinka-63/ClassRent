@@ -8,6 +8,8 @@ class PlatformUserDto extends PlatformUser {
     required super.fullName,
     required super.role,
     required super.isVerified,
+    required super.isActive,
+    super.agencyName,
     super.createdAt,
   });
 
@@ -18,6 +20,8 @@ class PlatformUserDto extends PlatformUser {
       fullName: json['full_name'] as String,
       role: UserRole.fromDb(json['role'] as String?),
       isVerified: json['is_verified'] as bool? ?? false,
+      isActive: json['deleted_at'] == null,
+      agencyName: json['agency_name'] as String?,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
     );
   }

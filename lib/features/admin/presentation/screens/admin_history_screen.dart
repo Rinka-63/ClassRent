@@ -54,6 +54,9 @@ class AdminHistoryScreen extends ConsumerWidget {
                 final entry = entries[index];
                 return Card(
                   child: ListTile(
+                    onTap: () => context.push(
+                      AppRoutes.adminAuditDetail.replaceFirst(':auditId', entry.id),
+                    ),
                     leading: const CircleAvatar(
                       backgroundColor: AppColors.surfaceContainerLow,
                       child: Icon(Icons.history_outlined),

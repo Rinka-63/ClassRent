@@ -6,8 +6,13 @@ class Agency {
     required this.slug,
     required this.isActive,
     required this.approvalStatus,
+    required this.roomCount,
+    required this.bookingCount,
     this.city,
     this.createdAt,
+    this.rejectedAt,
+    this.approvedAt,
+    this.rejectionReason,
   });
 
   final String id;
@@ -16,6 +21,11 @@ class Agency {
   final String slug;
   final bool isActive;
   final String approvalStatus;
+  final int roomCount;
+  final int bookingCount;
   final String? city;
   final DateTime? createdAt;
+  final DateTime? approvedAt;
+  final DateTime? rejectedAt;
+  final String? rejectionReason;
 }

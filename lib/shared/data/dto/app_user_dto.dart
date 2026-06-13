@@ -12,6 +12,7 @@ class AppUserDto extends AppUser {
     super.agencyId,
     super.agencyStatus,
     super.agencyIsActive,
+    super.deletedAt,
   });
 
   factory AppUserDto.fromJson(Map<String, dynamic> json) {
@@ -26,6 +27,7 @@ class AppUserDto extends AppUser {
       agencyId: json['agency_id'] as String?,
       agencyStatus: json['agency_status'] as String?,
       agencyIsActive: json['agency_is_active'] as bool?,
+      deletedAt: DateTime.tryParse(json['deleted_at']?.toString() ?? ''),
     );
   }
 }
