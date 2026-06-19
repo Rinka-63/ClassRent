@@ -17,17 +17,28 @@ final roomsProvider = FutureProvider<List<Room>>((ref) async {
   return result.match((failure) => throw failure, (rooms) => rooms);
 });
 
+final roomSearchProvider =
+    FutureProvider.family<List<Room>, String>((ref, query) async {
+  final result = await ref.watch(roomsRepositoryProvider).searchRooms(query);
+  return result.match((failure) => throw failure, (rooms) => rooms);
+});
+
 final roomDetailProvider = FutureProvider.family<Room, String>((ref, id) async {
   final result = await ref.watch(roomsRepositoryProvider).getRoomById(id);
   return result.match((failure) => throw failure, (room) => room);
 });
 
-final roomFacilitiesProvider = FutureProvider.family<List<String>, String>((ref, roomId) async {
-  final result = await ref.watch(roomsRepositoryProvider).getRoomFacilities(roomId);
+final roomFacilitiesProvider =
+    FutureProvider.family<List<String>, String>((ref, roomId) async {
+  final result =
+      await ref.watch(roomsRepositoryProvider).getRoomFacilities(roomId);
   return result.match((failure) => throw failure, (data) => data);
 });
 
-final roomSchedulesProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, roomId) async {
-  final result = await ref.watch(roomsRepositoryProvider).getRoomSchedules(roomId);
+final roomSchedulesProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, roomId) async {
+  final result =
+      await ref.watch(roomsRepositoryProvider).getRoomSchedules(roomId);
   return result.match((failure) => throw failure, (data) => data);
 });
