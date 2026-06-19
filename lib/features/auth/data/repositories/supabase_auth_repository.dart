@@ -68,10 +68,39 @@ class SupabaseAuthRepository implements AuthRepository {
       );
       final user = response.user;
       if (user == null) {
-        return left(const AuthFailure('Registration failed. Please try again.'));
+        return left(
+            const AuthFailure('Registration failed. Please try again.'));
       }
       await _ensureUserProfile(user, fullName, type, agencyName);
       return right(await _loadUserProfile(user.id));
+    } on AuthException catch (error) {
+      return left(AuthFailure(error.message, code: error.statusCode));
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AppUser>> updateProfile({
+    required String fullName,
+    String? phone,
+  }) async {
+    try {
+      final userId = _service.requireClient.auth.currentUser?.id;
+      if (userId == null) {
+        return left(const AuthFailure('You need to login again.'));
+      }
+
+      await _service.requireClient.from(SupabaseTables.users).update({
+        'full_name': fullName.trim(),
+        'phone': phone?.trim().isEmpty == true ? null : phone?.trim(),
+      }).eq('id', userId);
+
+      await _service.requireClient.auth.updateUser(
+        UserAttributes(data: {'full_name': fullName.trim()}),
+      );
+
+      return right(await _loadUserProfile(userId));
     } on AuthException catch (error) {
       return left(AuthFailure(error.message, code: error.statusCode));
     } catch (error) {
@@ -94,20 +123,24 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<AppUser> _loadUserProfile(String userId) async {
     var row = await _service.requireClient
         .from(SupabaseTables.users)
-        .select('id,email,full_name,phone,avatar_url,role,is_verified,deleted_at')
+        .select(
+            'id,email,full_name,phone,avatar_url,role,is_verified,deleted_at')
         .eq('id', userId)
         .single();
     var agency = await _loadUserAgency(row);
 
     if (_shouldRepairAgencyRegistration(userId, row, agency)) {
-      final metadata = _service.requireClient.auth.currentUser?.userMetadata ?? {};
+      final metadata =
+          _service.requireClient.auth.currentUser?.userMetadata ?? {};
       await _registerAgencyAdminProfile(
-        fullName: metadata['full_name']?.toString() ?? row['full_name'] as String,
+        fullName:
+            metadata['full_name']?.toString() ?? row['full_name'] as String,
         agencyName: metadata['agency_name']?.toString(),
       );
       row = await _service.requireClient
           .from(SupabaseTables.users)
-          .select('id,email,full_name,phone,avatar_url,role,is_verified,deleted_at')
+          .select(
+              'id,email,full_name,phone,avatar_url,role,is_verified,deleted_at')
           .eq('id', userId)
           .single();
       agency = await _loadUserAgency(row);
@@ -158,7 +191,8 @@ class SupabaseAuthRepository implements AuthRepository {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadUserAgency(Map<String, dynamic> userRow) async {
+  Future<Map<String, dynamic>?> _loadUserAgency(
+      Map<String, dynamic> userRow) async {
     final role = UserRole.fromDb(userRow['role'] as String?);
     final userId = userRow['id'] as String;
 
@@ -183,7 +217,8 @@ class SupabaseAuthRepository implements AuthRepository {
     if (agency != null) return false;
     if (_service.requireClient.auth.currentUser?.id != userId) return false;
 
-    final metadata = _service.requireClient.auth.currentUser?.userMetadata ?? {};
+    final metadata =
+        _service.requireClient.auth.currentUser?.userMetadata ?? {};
     final registrationType = metadata['registration_type']?.toString();
     final role = UserRole.fromDb(row['role'] as String?);
 
@@ -206,9 +241,9 @@ class SupabaseAuthRepository implements AuthRepository {
     );
   }
 
-  Future<Map<String, dynamic>?> _maybeSingle(Future<List<dynamic>> query) async {
+  Future<Map<String, dynamic>?> _maybeSingle(
+      Future<List<dynamic>> query) async {
     final rows = await query;
     return rows.isEmpty ? null : rows.first as Map<String, dynamic>;
   }
-
 }

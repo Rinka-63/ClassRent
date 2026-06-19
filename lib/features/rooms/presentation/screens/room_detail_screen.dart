@@ -14,6 +14,7 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../booking/presentation/providers/booking_admin_providers.dart';
 import '../../domain/entities/room.dart';
 import '../../../booking/domain/entities/booking.dart';
+import '../../../favorites/presentation/providers/favorites_provider.dart';
 import '../providers/rooms_providers.dart';
 
 class RoomDetailScreen extends ConsumerWidget {
@@ -25,7 +26,8 @@ class RoomDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final roomValue = ref.watch(roomDetailProvider(roomId));
     final user = ref.watch(currentUserProvider);
-    final isAdmin = user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final isAdmin =
+        user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
 
     return AppScaffold(
       title: 'Room Detail',
@@ -45,7 +47,7 @@ class RoomDetailScreen extends ConsumerWidget {
           child: ErrorCard(message: error.toString()),
         ),
         data: (room) => DefaultTabController(
-          length: 4,
+          length: isAdmin ? 4 : 3,
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
               SliverToBoxAdapter(
@@ -57,12 +59,12 @@ class RoomDetailScreen extends ConsumerWidget {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _TabHeader(
-                  const TabBar(
+                  TabBar(
                     tabs: [
-                      Tab(text: 'Overview'),
-                      Tab(text: 'Facilities'),
-                      Tab(text: 'Schedule'),
-                      Tab(text: 'Bookings'),
+                      const Tab(text: 'Overview'),
+                      const Tab(text: 'Facilities'),
+                      const Tab(text: 'Schedule'),
+                      if (isAdmin) const Tab(text: 'Bookings'),
                     ],
                     labelColor: AppColors.primary,
                     indicatorColor: AppColors.primary,
@@ -75,7 +77,7 @@ class RoomDetailScreen extends ConsumerWidget {
                 _OverviewTab(room: room),
                 _FacilitiesTab(roomId: room.id, isAdmin: isAdmin),
                 _ScheduleTab(roomId: room.id, isAdmin: isAdmin),
-                _BookingsTab(roomId: room.id, isAdmin: isAdmin),
+                if (isAdmin) _BookingsTab(roomId: room.id, isAdmin: isAdmin),
               ],
             ),
           ),
@@ -85,14 +87,21 @@ class RoomDetailScreen extends ConsumerWidget {
   }
 }
 
-class _RoomHero extends StatelessWidget {
+class _RoomHero extends ConsumerWidget {
   const _RoomHero({required this.room});
 
   final Room room;
 
   @override
-  Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final money =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final user = ref.watch(currentUserProvider);
+    final isAdmin =
+        user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final favorites = ref.watch(favoritesProvider);
+    final favoriteIds = favorites.valueOrNull ?? <String>{};
+    final isFavorite = favoriteIds.contains(room.id);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -106,17 +115,20 @@ class _RoomHero extends StatelessWidget {
             height: 220,
             decoration: BoxDecoration(
               color: AppColors.primaryContainer.withValues(alpha: 0.14),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.meeting_room_outlined, size: 72, color: AppColors.primary),
+            child: const Icon(Icons.meeting_room_outlined,
+                size: 72, color: AppColors.primary),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(room.name, style: Theme.of(context).textTheme.headlineSmall),
+                Text(room.name,
+                    style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 6),
                 Text('${room.city} • ${room.capacity} seats'),
                 const SizedBox(height: 12),
@@ -124,27 +136,50 @@ class _RoomHero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _Chip(text: room.roomType == null ? 'CLASSROOM' : room.roomType!.toUpperCase()),
+                    _Chip(
+                        text: room.roomType == null
+                            ? 'CLASSROOM'
+                            : room.roomType!.toUpperCase()),
                     _Chip(text: room.isActive ? 'ACTIVE' : 'INACTIVE'),
                     _Chip(text: money.format(room.hourlyRate)),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(room.description ?? 'Room description will come from Supabase.'),
+                Text(room.description ??
+                    'Room description will come from Supabase.'),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    FilledButton.icon(
-                      onPressed: () => context.push(AppRoutes.bookingCreate),
-                      icon: const Icon(Icons.calendar_today_outlined),
-                      label: const Text('Start Booking'),
-                    ),
+                    if (!isAdmin)
+                      FilledButton.icon(
+                        onPressed: () => context.push(
+                            '${AppRoutes.bookingCreate}?roomId=${room.id}'),
+                        icon: const Icon(Icons.calendar_today_outlined),
+                        label: const Text('Start Booking'),
+                      ),
                     const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Edit Room'),
-                    ),
+                    if (!isAdmin)
+                      OutlinedButton.icon(
+                        onPressed: favorites.isLoading
+                            ? null
+                            : () async {
+                                final success = await ref
+                                    .read(favoritesProvider.notifier)
+                                    .toggle(room.id);
+                                if (!success && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('Unable to update favorite.'),
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: Icon(isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border),
+                        label: Text(isFavorite ? 'Saved' : 'Save'),
+                      ),
                   ],
                 ),
               ],
@@ -171,8 +206,16 @@ class _OverviewTab extends StatelessWidget {
           children: [
             _DetailRow(label: 'Capacity', value: '${room.capacity} people'),
             _DetailRow(label: 'City', value: room.city),
-            _DetailRow(label: 'Hourly rate', value: NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0).format(room.hourlyRate)),
-            _DetailRow(label: 'Approval', value: room.requiresApproval ? 'Required' : 'Not required'),
+            if (room.address != null && room.address!.trim().isNotEmpty)
+              _DetailRow(label: 'Address', value: room.address!),
+            _DetailRow(
+                label: 'Hourly rate',
+                value: NumberFormat.currency(
+                        locale: 'id_ID', symbol: 'Rp', decimalDigits: 0)
+                    .format(room.hourlyRate)),
+            _DetailRow(
+                label: 'Approval',
+                value: room.requiresApproval ? 'Required' : 'Not required'),
           ],
         ),
       ],
@@ -203,7 +246,9 @@ class _FacilitiesTab extends ConsumerWidget {
                     onPressed: () async {
                       final edited = await _editFacilities(context, facilities);
                       if (edited == null) return;
-                      await ref.read(roomsRepositoryProvider).saveRoomFacilities(roomId, edited);
+                      await ref
+                          .read(roomsRepositoryProvider)
+                          .saveRoomFacilities(roomId, edited);
                       ref.invalidate(roomFacilitiesProvider(roomId));
                     },
                     icon: const Icon(Icons.edit_outlined),
@@ -217,7 +262,8 @@ class _FacilitiesTab extends ConsumerWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: facilities.map((item) => _Chip(text: item)).toList(),
+                  children:
+                      facilities.map((item) => _Chip(text: item)).toList(),
                 ),
             ],
           ),
@@ -226,7 +272,8 @@ class _FacilitiesTab extends ConsumerWidget {
     );
   }
 
-  Future<List<String>?> _editFacilities(BuildContext context, List<String> existing) async {
+  Future<List<String>?> _editFacilities(
+      BuildContext context, List<String> existing) async {
     final controller = TextEditingController(text: existing.join(', '));
     return showModalBottomSheet<List<String>>(
       context: context,
@@ -241,7 +288,8 @@ class _FacilitiesTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Edit Facilities', style: Theme.of(sheetContext).textTheme.titleLarge),
+            Text('Edit Facilities',
+                style: Theme.of(sheetContext).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
@@ -292,7 +340,9 @@ class _ScheduleTab extends ConsumerWidget {
                     onPressed: () async {
                       final edited = await _editSchedules(context, schedules);
                       if (edited == null) return;
-                      await ref.read(roomsRepositoryProvider).saveRoomSchedules(roomId, edited);
+                      await ref
+                          .read(roomsRepositoryProvider)
+                          .saveRoomSchedules(roomId, edited);
                       ref.invalidate(roomSchedulesProvider(roomId));
                     },
                     icon: const Icon(Icons.edit_outlined),
@@ -306,7 +356,8 @@ class _ScheduleTab extends ConsumerWidget {
                 for (final schedule in schedules)
                   _DetailRow(
                     label: 'Day ${schedule['day_of_week']}',
-                    value: '${schedule['open_time']} - ${schedule['close_time']}',
+                    value:
+                        '${schedule['open_time']} - ${schedule['close_time']}',
                   ),
             ],
           ),
@@ -324,7 +375,8 @@ class _ScheduleTab extends ConsumerWidget {
           ? '1,08:00,17:00,false'
           : existing
               .map(
-                (item) => '${item['day_of_week']},${item['open_time']},${item['close_time']},${item['is_closed']}',
+                (item) =>
+                    '${item['day_of_week']},${item['open_time']},${item['close_time']},${item['is_closed']}',
               )
               .join('\n'),
     );
@@ -342,7 +394,8 @@ class _ScheduleTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Edit Schedule', style: Theme.of(sheetContext).textTheme.titleLarge),
+            Text('Edit Schedule',
+                style: Theme.of(sheetContext).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
@@ -358,15 +411,15 @@ class _ScheduleTab extends ConsumerWidget {
                     .split('\n')
                     .where((line) => line.trim().isNotEmpty)
                     .map((line) {
-                      final parts = line.split(',');
-                      return <String, dynamic>{
-                        'day_of_week': int.parse(parts[0].trim()),
-                        'open_time': parts[1].trim(),
-                        'close_time': parts[2].trim(),
-                        'is_closed': parts.length > 3 ? parts[3].trim() == 'true' : false,
-                      };
-                    })
-                    .toList();
+                  final parts = line.split(',');
+                  return <String, dynamic>{
+                    'day_of_week': int.parse(parts[0].trim()),
+                    'open_time': parts[1].trim(),
+                    'close_time': parts[2].trim(),
+                    'is_closed':
+                        parts.length > 3 ? parts[3].trim() == 'true' : false,
+                  };
+                }).toList();
                 Navigator.pop(sheetContext, parsed);
               },
               child: const Text('Save'),
@@ -412,7 +465,9 @@ class _BookingsTab extends ConsumerWidget {
                 ref.invalidate(roomBookingsProvider(roomId));
               },
               onCancel: () async {
-                await ref.read(bookingRepositoryProvider).cancelBooking(booking.id);
+                await ref
+                    .read(bookingRepositoryProvider)
+                    .cancelBooking(booking.id);
                 ref.invalidate(roomBookingsProvider(roomId));
               },
             );
@@ -444,18 +499,22 @@ class _BookingRow extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Booking ${booking.id.substring(0, 8)}', style: Theme.of(context).textTheme.titleMedium),
+            Text('Booking ${booking.id.substring(0, 8)}',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
-            Text('${booking.bookingDate.toIso8601String().split('T').first} ${booking.startTime} - ${booking.endTime}'),
+            Text(
+                '${booking.bookingDate.toIso8601String().split('T').first} ${booking.startTime} - ${booking.endTime}'),
             const SizedBox(height: 8),
             Text('Status: ${booking.status}'),
             if (isAdmin) ...[
               const SizedBox(height: 12),
-                Row(
-                  children: [
-                  FilledButton(onPressed: onConfirm, child: const Text('Approve')),
+              Row(
+                children: [
+                  FilledButton(
+                      onPressed: onConfirm, child: const Text('Approve')),
                   const SizedBox(width: 8),
-                  OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
+                  OutlinedButton(
+                      onPressed: onCancel, child: const Text('Cancel')),
                 ],
               ),
             ],
@@ -493,7 +552,11 @@ class _DetailCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               if (trailing != null) trailing!,
             ],
           ),
@@ -518,7 +581,8 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.onSurfaceVariant)),
+          Text(label,
+              style: const TextStyle(color: AppColors.onSurfaceVariant)),
           Flexible(
             child: Text(
               value,
@@ -562,8 +626,10 @@ class _TabHeader extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(color: Theme.of(context).scaffoldBackgroundColor, child: tabBar);
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+        color: Theme.of(context).scaffoldBackgroundColor, child: tabBar);
   }
 
   @override

@@ -16,12 +16,15 @@ class RoomCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favoriteIds = ref.watch(favoritesProvider);
-    final money = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final money =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final favoriteSet = favoriteIds.valueOrNull ?? <String>{};
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(AppRoutes.roomDetail.replaceFirst(':roomId', room.id)),
+        onTap: () =>
+            context.push(AppRoutes.roomDetail.replaceFirst(':roomId', room.id)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -29,7 +32,8 @@ class RoomCard extends ConsumerWidget {
               height: 128,
               color: AppColors.primaryContainer,
               alignment: Alignment.center,
-              child: const Icon(Icons.meeting_room_outlined, color: Colors.white, size: 48),
+              child: const Icon(Icons.meeting_room_outlined,
+                  color: Colors.white, size: 48),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -47,9 +51,23 @@ class RoomCard extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => ref.read(favoritesProvider.notifier).toggle(room.id),
+                        onPressed: favoriteIds.isLoading
+                            ? null
+                            : () async {
+                                final success = await ref
+                                    .read(favoritesProvider.notifier)
+                                    .toggle(room.id);
+                                if (!success && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('Unable to update favorite.'),
+                                    ),
+                                  );
+                                }
+                              },
                         icon: Icon(
-                          favoriteIds.contains(room.id)
+                          favoriteSet.contains(room.id)
                               ? Icons.favorite
                               : Icons.favorite_border,
                         ),

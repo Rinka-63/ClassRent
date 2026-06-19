@@ -17,7 +17,8 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final isAdmin = user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final isAdmin =
+        user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
 
     return AppScaffold(
       title: isAdmin ? 'Profile' : 'Profile',
@@ -28,11 +29,20 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _ProfileCard(user: user),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: user == null
+                ? null
+                : () => _showEditProfileSheet(context, ref, user),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit Profile'),
+          ),
           const SizedBox(height: 16),
           _SecurityCard(
             user: user,
             onPressed: () {
-              if (user?.role == UserRole.admin || user?.role == UserRole.superAdmin) {
+              if (user?.role == UserRole.admin ||
+                  user?.role == UserRole.superAdmin) {
                 context.push(AppRoutes.adminHistory);
               } else {
                 context.push(AppRoutes.support);
@@ -101,7 +111,8 @@ class ProfileScreen extends ConsumerWidget {
               foregroundColor: AppColors.error,
               side: const BorderSide(color: AppColors.error),
               minimumSize: const Size.fromHeight(54),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
             ),
           ),
           const SizedBox(height: 16),
@@ -117,6 +128,115 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showEditProfileSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppUser user,
+  ) async {
+    final nameController = TextEditingController(text: user.fullName);
+    final phoneController = TextEditingController(text: user.phone ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        var isSaving = false;
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Edit Profile',
+                      style: Theme.of(sheetContext).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: nameController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Full name',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Full name is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone number',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              setSheetState(() => isSaving = true);
+                              final success = await ref
+                                  .read(authControllerProvider.notifier)
+                                  .updateProfile(
+                                    fullName: nameController.text,
+                                    phone: phoneController.text,
+                                  );
+                              if (!sheetContext.mounted) return;
+                              setSheetState(() => isSaving = false);
+                              if (success) {
+                                Navigator.pop(sheetContext);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Profile updated')),
+                                );
+                              } else {
+                                final message = ref
+                                        .read(authControllerProvider)
+                                        .errorMessage ??
+                                    'Unable to update profile.';
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(message)),
+                                );
+                              }
+                            },
+                      child: isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Save'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    nameController.dispose();
+    phoneController.dispose();
   }
 }
 
@@ -159,7 +279,8 @@ class _ProfileCard extends StatelessWidget {
                   color: AppColors.primaryContainer.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Icon(Icons.person, color: AppColors.primary, size: 36),
+                child: const Icon(Icons.person,
+                    color: AppColors.primary, size: 36),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -168,10 +289,14 @@ class _ProfileCard extends StatelessWidget {
                   children: [
                     Text(
                       user?.fullName ?? 'Guest',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 4),
-                    Text(user?.email ?? '-', style: Theme.of(context).textTheme.bodyMedium),
+                    Text(user?.email ?? '-',
+                        style: Theme.of(context).textTheme.bodyMedium),
                     const SizedBox(height: 10),
                     _RoleBadge(text: roleLabel),
                   ],
@@ -185,12 +310,15 @@ class _ProfileCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _InfoChip(
-              icon: Icons.badge_outlined,
-                label: user?.agencyId == null ? 'No Agency Yet' : 'Agency Linked',
+                icon: Icons.badge_outlined,
+                label:
+                    user?.agencyId == null ? 'No Agency Yet' : 'Agency Linked',
               ),
               _InfoChip(
                 icon: Icons.verified_outlined,
-                label: user?.agencyIsActive == false ? 'Inactive' : 'Account Active',
+                label: user?.agencyIsActive == false
+                    ? 'Inactive'
+                    : 'Account Active',
               ),
             ],
           ),
@@ -208,7 +336,8 @@ class _SecurityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lastLogin = DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now().subtract(const Duration(hours: 2)));
+    final lastLogin = DateFormat('dd MMM yyyy, HH:mm')
+        .format(DateTime.now().subtract(const Duration(hours: 2)));
 
     return Container(
       decoration: BoxDecoration(
@@ -243,7 +372,10 @@ class _SecurityCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Last login: $lastLogin',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 16),
           FilledButton(
@@ -253,7 +385,9 @@ class _SecurityCard extends StatelessWidget {
               foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(48),
             ),
-            child: Text(user?.role == UserRole.user ? 'Contact Support' : 'Audit History'),
+            child: Text(user?.role == UserRole.user
+                ? 'Contact Support'
+                : 'Audit History'),
           ),
         ],
       ),
