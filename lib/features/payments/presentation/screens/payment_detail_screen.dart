@@ -48,17 +48,46 @@ class PaymentDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     PaymentInfoRow(label: 'Payment ID', value: payment.id),
                     PaymentInfoRow(label: 'Booking ID', value: payment.bookingId),
-                    PaymentInfoRow(
-                      label: 'Method',
-                      value: payment.paymentMethod ?? '-',
-                    ),
+                    PaymentInfoRow(label: 'User ID', value: payment.userId),
                     PaymentInfoRow(
                       label: 'Order ID',
-                      value: payment.midtransOrderId ?? '-',
+                      value: payment.orderId ?? '-',
                     ),
                     PaymentInfoRow(
                       label: 'Transaction ID',
-                      value: payment.midtransTransactionId ?? '-',
+                      value: payment.transactionId ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Gross amount',
+                      value: formatPaymentAmount(payment.grossAmount),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Payment method',
+                      value: payment.paymentMethod ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Payment type',
+                      value: payment.paymentType ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Status',
+                      value: payment.transactionStatus.value,
+                    ),
+                    PaymentInfoRow(
+                      label: 'Snap token',
+                      value: payment.snapToken ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Snap redirect',
+                      value: payment.snapRedirectUrl ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Paid at',
+                      value: formatPaymentDate(payment.paidAt),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Expired at',
+                      value: formatPaymentDate(payment.expiredAt),
                     ),
                     PaymentInfoRow(
                       label: 'Created at',
@@ -69,8 +98,8 @@ class PaymentDetailScreen extends ConsumerWidget {
                       value: formatPaymentDate(payment.updatedAt),
                     ),
                     PaymentInfoRow(
-                      label: 'Settlement',
-                      value: formatPaymentDate(payment.settlementTime),
+                      label: 'Midtrans response',
+                      value: payment.midtransResponse?.toString() ?? '-',
                     ),
                   ],
                 ),

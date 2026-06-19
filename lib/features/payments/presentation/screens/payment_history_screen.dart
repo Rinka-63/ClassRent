@@ -69,7 +69,12 @@ class _PaymentHistoryCard extends StatelessWidget {
       child: ListTile(
         leading: const Icon(Icons.receipt_long_outlined),
         title: Text(formatPaymentAmount(payment.amount)),
-        subtitle: Text('Booking ${payment.bookingId}'),
+        subtitle: Text(
+          '${payment.orderId ?? 'No order id'}\n'
+          '${payment.paymentMethod ?? payment.paymentType ?? 'No method'} • '
+          '${formatPaymentDate(payment.createdAt)}',
+        ),
+        isThreeLine: true,
         trailing: PaymentStatusChip(status: payment.status),
         onTap: () => context.push(AppRoutes.paymentDetailPath(payment.id)),
       ),

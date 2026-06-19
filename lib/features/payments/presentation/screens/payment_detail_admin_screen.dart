@@ -46,36 +46,50 @@ class PaymentDetailAdminScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    PaymentInfoRow(label: 'Payment ID', value: payment.id),
-                    PaymentInfoRow(label: 'Booking ID', value: payment.bookingId),
-                    PaymentInfoRow(label: 'User ID', value: payment.userId),
                     PaymentInfoRow(
-                      label: 'Agency ID',
-                      value: payment.agencyId ?? '-',
-                    ),
-                    PaymentInfoRow(
-                      label: 'Midtrans Order',
-                      value: payment.midtransOrderId ?? '-',
+                      label: 'Order ID',
+                      value: payment.orderId ?? '-',
                     ),
                     PaymentInfoRow(
                       label: 'Transaction ID',
-                      value: payment.midtransTransactionId ?? '-',
+                      value: payment.transactionId ?? '-',
+                    ),
+                    PaymentInfoRow(label: 'Booking ID', value: payment.bookingId),
+                    PaymentInfoRow(
+                      label: 'Nama User',
+                      value: payment.userName ?? payment.userId,
                     ),
                     PaymentInfoRow(
-                      label: 'Method',
+                      label: 'Metode Pembayaran',
                       value: payment.paymentMethod ?? '-',
                     ),
                     PaymentInfoRow(
-                      label: 'Created at',
+                      label: 'Jenis Pembayaran',
+                      value: payment.paymentType ?? '-',
+                    ),
+                    PaymentInfoRow(
+                      label: 'Nominal',
+                      value: formatPaymentAmount(payment.grossAmount),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Status Midtrans',
+                      value: payment.transactionStatus.value,
+                    ),
+                    PaymentInfoRow(
+                      label: 'Tanggal Dibuat',
                       value: formatPaymentDate(payment.createdAt),
                     ),
                     PaymentInfoRow(
-                      label: 'Expires at',
-                      value: formatPaymentDate(payment.expiredAt),
+                      label: 'Tanggal Pembayaran',
+                      value: formatPaymentDate(payment.paidAt),
                     ),
                     PaymentInfoRow(
-                      label: 'Settlement',
-                      value: formatPaymentDate(payment.settlementTime),
+                      label: 'Updated at',
+                      value: formatPaymentDate(payment.updatedAt),
+                    ),
+                    PaymentInfoRow(
+                      label: 'Midtrans response',
+                      value: payment.midtransResponse?.toString() ?? '-',
                     ),
                   ],
                 ),

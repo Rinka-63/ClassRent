@@ -18,17 +18,21 @@ class UnconfiguredPaymentRepository implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> cancelPayment(String paymentId) async {
+  Future<Either<Failure, Payment>> createMidtransPayment(String bookingId) async {
     return const Left(_failure);
   }
 
   @override
-  Future<Either<Failure, List<Payment>>> getAgencyPayments(String adminId) async {
-    return const Right([]);
+  Future<Either<Failure, List<Payment>>> getAllPaymentsForAdmin({
+    String? status,
+  }) async {
+    return const Left(_failure);
   }
 
   @override
-  Future<Either<Failure, Payment>> getPaymentByBookingId(String bookingId) async {
+  Future<Either<Failure, List<Payment>>> getAdminPayments({
+    String? status,
+  }) async {
     return const Left(_failure);
   }
 
@@ -38,7 +42,30 @@ class UnconfiguredPaymentRepository implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, List<Payment>>> getPaymentHistory(String userId) async {
+  Future<Either<Failure, Payment?>> getLatestPaymentByBooking(String bookingId) async {
+    return const Right(null);
+  }
+
+  @override
+  Future<Either<Failure, List<Payment>>> getPaymentsByBooking(String bookingId) async {
     return const Right([]);
+  }
+
+  @override
+  Future<Either<Failure, List<Payment>>> getPaymentsByUser(String userId) async {
+    return const Right([]);
+  }
+
+  @override
+  Future<Either<Failure, Payment>> updatePaymentStatus({
+    required String paymentId,
+    required PaymentStatus status,
+    Map<String, dynamic>? midtransResponse,
+    String? transactionId,
+    String? paymentMethod,
+    String? paymentType,
+    DateTime? paidAt,
+  }) async {
+    return const Left(_failure);
   }
 }
