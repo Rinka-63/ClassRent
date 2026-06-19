@@ -4,6 +4,8 @@ import '../../../../core/error/failure.dart';
 import '../entities/booking.dart';
 
 abstract interface class BookingRepository {
+  Future<Either<Failure, Booking>> getBookingById(String id);
+  Future<Either<Failure, List<Booking>>> getBookingsForUser(String userId);
   Future<Either<Failure, List<Booking>>> getBookingsForAgency(String adminId);
   Future<Either<Failure, List<Booking>>> getBookingsForRoom(String roomId);
   Future<Either<Failure, Booking>> createBooking(Map<String, dynamic> payload);

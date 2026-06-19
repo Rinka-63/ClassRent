@@ -13,6 +13,34 @@ class SupabaseBookingRepository implements BookingRepository {
   final SupabaseService _service;
 
   @override
+  Future<Either<Failure, Booking>> getBookingById(String id) async {
+    try {
+      final row = await _service.requireClient
+          .from(SupabaseTables.bookings)
+          .select()
+          .eq('id', id)
+          .single();
+      return right(BookingDto.fromJson(row));
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Booking>>> getBookingsForUser(String userId) async {
+    try {
+      final rows = await _service.requireClient
+          .from(SupabaseTables.bookings)
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      return right(rows.map(BookingDto.fromJson).toList());
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<Booking>>> getBookingsForAgency(String adminId) async {
     try {
       final roomIds = await _service.requireClient

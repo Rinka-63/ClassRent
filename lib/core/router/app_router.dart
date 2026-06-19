@@ -42,9 +42,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutes.splash,
     redirect: (context, state) {
       final path = state.uri.path;
-      if (isAuthLoading) return path == AppRoutes.splash ? null : AppRoutes.splash;
+      if (isAuthLoading)
+        return path == AppRoutes.splash ? null : AppRoutes.splash;
       if (!isAuthenticated && path != AppRoutes.login) return AppRoutes.login;
-      if (isAuthenticated && (path == AppRoutes.login || path == AppRoutes.splash)) {
+      if (isAuthenticated &&
+          (path == AppRoutes.login || path == AppRoutes.splash)) {
         return _landingPathFor(user);
       }
       if (role == UserRole.admin &&
@@ -81,7 +83,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.bookingCreate,
-        builder: (_, __) => const BookingFlowScreen(),
+        builder: (_, state) => BookingFlowScreen(
+          initialRoomId: state.uri.queryParameters['roomId'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.payments,
@@ -103,7 +107,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.notifications,
         builder: (_, __) => const NotificationsScreen(),
       ),
-      GoRoute(path: AppRoutes.profile, builder: (_, __) => const ProfileScreen()),
+      GoRoute(
+          path: AppRoutes.profile, builder: (_, __) => const ProfileScreen()),
       GoRoute(
         path: AppRoutes.support,
         builder: (_, __) => const SupportTicketsScreen(),
@@ -114,7 +119,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           roomId: state.pathParameters['roomId']!,
         ),
       ),
-      GoRoute(path: AppRoutes.admin, builder: (_, __) => const AdminDashboardScreen()),
+      GoRoute(
+          path: AppRoutes.admin,
+          builder: (_, __) => const AdminDashboardScreen()),
       GoRoute(
         path: AppRoutes.adminReports,
         builder: (_, __) => const AdminReportsScreen(),
@@ -173,8 +180,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 String _landingPathFor(AppUser? user) {
   return switch (user?.role ?? UserRole.user) {
-    UserRole.admin =>
-      user?.hasApprovedAgency == true ? AppRoutes.admin : AppRoutes.adminPending,
+    UserRole.admin => user?.hasApprovedAgency == true
+        ? AppRoutes.admin
+        : AppRoutes.adminPending,
     UserRole.superAdmin => AppRoutes.superAdmin,
     UserRole.user => AppRoutes.home,
   };
