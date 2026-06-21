@@ -1,28 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/supabase_tables.dart';
-import '../../../../core/supabase/supabase_client_provider.dart';
+import '../../../../../core/constants/supabase_tables.dart';
+import '../../../../../core/supabase/supabase_client_provider.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../rooms/domain/entities/room.dart';
 import '../../../rooms/data/dto/room_dto.dart';
+import '../../domain/entities/audit_log_entry.dart';
 
-class AuditLogEntry {
-  const AuditLogEntry({
-    required this.id,
-    required this.action,
-    required this.entityType,
-    required this.createdAt,
-    this.actorId,
-    this.entityId,
-  });
 
-  final String id;
-  final String action;
-  final String entityType;
-  final String? actorId;
-  final String? entityId;
-  final DateTime createdAt;
-}
 
 final adminRoomsProvider = FutureProvider<List<Room>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
@@ -82,24 +67,37 @@ final adminHistoryProvider = FutureProvider<List<AuditLogEntry>>((ref) async {
   if (client == null || user == null) return const [];
 
   final rows = await client
-      .from('audit_logs')
-      .select('id,actor_id,action,entity_type,entity_id,created_at')
-      .eq('actor_id', user.id)
-      .order('created_at', ascending: false)
-      .limit(20);
+      .rpc('get_agency_audit_logs', params: {'p_admin_id': user.id});
 
-  return rows
-      .map(
-        (row) => AuditLogEntry(
-          id: row['id'] as String,
-          actorId: row['actor_id'] as String?,
-          action: row['action'] as String,
-          entityType: row['entity_type'] as String,
-          entityId: row['entity_id'] as String?,
-          createdAt: DateTime.parse(row['created_at'].toString()),
-        ),
-      )
-      .toList();
+  // Supabase RPC returns List<dynamic>
+  final List<dynamic> resultList = rows as List<dynamic>;
+
+  return resultList.map((dynamic item) {
+    final row = item as Map<String, dynamic>;
+    
+    final actorName = row['actor_name'] as String?;
+    final newData = row['new'] as Map<String, dynamic>?;
+    final oldData = row['old'] as Map<String, dynamic>?;
+    final data = newData ?? oldData;
+    
+    String? entityLabel = row['entity_id'] as String?;
+    if (data != null) {
+      entityLabel = (data['name'] ?? data['full_name'] ?? data['title'] ?? row['entity_id'])?.toString();
+    }
+
+    return AuditLogEntry(
+      id: row['id'] as String,
+      actorId: row['actor_id'] as String?,
+      actorName: actorName,
+      action: row['action'] as String,
+      entityType: row['entity_type'] as String,
+      entityId: row['entity_id'] as String?,
+      entityLabel: entityLabel,
+      oldData: oldData,
+      newData: newData,
+      createdAt: DateTime.parse(row['created_at'].toString()),
+    );
+  }).toList();
 });
 
 class AdminRoomReports {

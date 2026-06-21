@@ -6,6 +6,7 @@ class AppNotification {
     required this.title,
     required this.body,
     this.isRead = false,
+    this.createdAt,
   });
 
   final String id;
@@ -14,4 +15,5 @@ class AppNotification {
   final String title;
   final String body;
   final bool isRead;
+  final DateTime? createdAt;
 }

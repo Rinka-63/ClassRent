@@ -19,6 +19,7 @@ class Room {
     this.reviewCount = 0,
     this.isActive = true,
     this.address,
+    this.previewUrl,
   });
 
   final String id;
@@ -40,4 +41,5 @@ class Room {
   final bool isActive;
   final String city;
   final String? address;
+  final String? previewUrl;
 }

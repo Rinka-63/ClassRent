@@ -11,18 +11,21 @@ class RoleAwareNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_NavItem>[
-      const _NavItem(AppRoutes.home, Icons.home_outlined, 'Home'),
-      const _NavItem(AppRoutes.search, Icons.search, 'Search'),
-      const _NavItem(AppRoutes.bookings, Icons.calendar_today_outlined, 'Booking'),
-      const _NavItem(AppRoutes.favorites, Icons.favorite_border, 'Saved'),
-      const _NavItem(AppRoutes.profile, Icons.person_outline, 'Profile'),
+      const _NavItem(AppRoutes.home, Icons.home_outlined, Icons.home, 'Beranda'),
+      const _NavItem(AppRoutes.bookings, Icons.calendar_today_outlined, Icons.calendar_today, 'Booking'),
+      const _NavItem(AppRoutes.favorites, Icons.favorite_border, Icons.favorite, 'Favorit'),
+      const _NavItem(AppRoutes.profile, Icons.person_outline, Icons.person, 'Profil'),
     ];
 
     return NavigationBar(
-      selectedIndex: items.indexWhere((item) => item.path == currentPath).clamp(0, 4),
+      selectedIndex: items.indexWhere((item) => item.path == currentPath).clamp(0, items.length - 1),
       destinations: [
         for (final item in items)
-          NavigationDestination(icon: Icon(item.icon), label: item.label),
+          NavigationDestination(
+            icon: Icon(item.icon),
+            selectedIcon: Icon(item.selectedIcon),
+            label: item.label,
+          ),
       ],
       onDestinationSelected: (index) => context.go(items[index].path),
     );
@@ -30,9 +33,10 @@ class RoleAwareNavBar extends StatelessWidget {
 }
 
 class _NavItem {
-  const _NavItem(this.path, this.icon, this.label);
+  const _NavItem(this.path, this.icon, this.selectedIcon, this.label);
 
   final String path;
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
 }

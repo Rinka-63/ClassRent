@@ -17,10 +17,10 @@ final agencyBookingsProvider = FutureProvider<List<Booking>>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return const [];
   final result = await ref.watch(bookingRepositoryProvider).getBookingsForAgency(user.id);
-  return result.match((failure) => throw failure, (data) => data);
+  return result.match((failure) => throw Exception(failure.message), (data) => data);
 });
 
 final roomBookingsProvider = FutureProvider.family<List<Booking>, String>((ref, roomId) async {
   final result = await ref.watch(bookingRepositoryProvider).getBookingsForRoom(roomId);
-  return result.match((failure) => throw failure, (data) => data);
+  return result.match((failure) => throw Exception(failure.message), (data) => data);
 });

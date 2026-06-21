@@ -62,6 +62,12 @@ class ProfileScreen extends ConsumerWidget {
               onTap: () => context.push(AppRoutes.adminReports),
             ),
             _SettingsTile(
+              icon: Icons.business,
+              title: 'Agency Profile',
+              subtitle: 'Edit agency details',
+              onTap: () => context.push(AppRoutes.agencyProfile),
+            ),
+            _SettingsTile(
               icon: Icons.history_outlined,
               title: 'Activity History',
               subtitle: 'Audit logs and recent admin actions',

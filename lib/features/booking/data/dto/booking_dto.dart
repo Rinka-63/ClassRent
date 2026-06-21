@@ -12,9 +12,21 @@ class BookingDto extends Booking {
     required super.finalPrice,
     required super.status,
     super.facilityId,
+    super.userName,
+    super.roomName,
   });
 
   factory BookingDto.fromJson(Map<String, dynamic> json) {
+    // Extract related names if joined
+    String? parsedUserName;
+    if (json['users'] != null) {
+      parsedUserName = json['users']['full_name'] as String?;
+    }
+    String? parsedRoomName;
+    if (json['rooms'] != null) {
+      parsedRoomName = json['rooms']['name'] as String?;
+    }
+
     return BookingDto(
       id: json['id'] as String,
       userId: json['user_id'] as String,
@@ -26,6 +38,8 @@ class BookingDto extends Booking {
       basePrice: (json['base_price'] as num).toDouble(),
       finalPrice: (json['final_price'] as num).toDouble(),
       status: json['status'] as String,
+      userName: parsedUserName,
+      roomName: parsedRoomName,
     );
   }
 }

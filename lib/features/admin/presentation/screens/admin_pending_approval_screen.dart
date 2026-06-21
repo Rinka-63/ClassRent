@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/app_scaffold.dart';
+import '../../../../../core/widgets/app_scaffold.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
 class AdminPendingApprovalScreen extends ConsumerWidget {

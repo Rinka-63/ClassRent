@@ -90,6 +90,11 @@ class AuthController extends StateNotifier<AuthState> {
     required String fullName,
     required RegistrationType type,
     String? agencyName,
+    String? agencyEmail,
+    String? agencyPhone,
+    String? agencyAddress,
+    String? agencyCity,
+    String? agencyDescription,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     final result = await _repository.register(
@@ -98,6 +103,11 @@ class AuthController extends StateNotifier<AuthState> {
       fullName: fullName,
       type: type,
       agencyName: agencyName,
+      agencyEmail: agencyEmail,
+      agencyPhone: agencyPhone,
+      agencyAddress: agencyAddress,
+      agencyCity: agencyCity,
+      agencyDescription: agencyDescription,
     );
     return result.match(
       (failure) {
@@ -109,6 +119,24 @@ class AuthController extends StateNotifier<AuthState> {
       },
       (user) {
         state = AuthState(user: user);
+        return true;
+      },
+    );
+  }
+
+  Future<bool> resetPassword(String email) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    final result = await _repository.resetPassword(email);
+    return result.match(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: _messageFor(failure),
+        );
+        return false;
+      },
+      (_) {
+        state = state.copyWith(isLoading: false);
         return true;
       },
     );

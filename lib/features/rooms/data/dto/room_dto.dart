@@ -21,6 +21,7 @@ class RoomDto extends Room {
     super.reviewCount,
     super.isActive,
     super.address,
+    super.previewUrl,
   });
 
   factory RoomDto.fromJson(Map<String, dynamic> json) {
@@ -44,6 +45,7 @@ class RoomDto extends Room {
       isActive: json['is_active'] as bool? ?? true,
       city: json['city'] as String,
       address: json['address'] as String?,
+      previewUrl: json['preview_url'] as String?,
     );
   }
 
@@ -68,6 +70,7 @@ class RoomDto extends Room {
       'is_active': isActive,
       'city': city,
       'address': address,
+      'preview_url': previewUrl,
     };
   }
 }

@@ -15,7 +15,13 @@ abstract interface class AuthRepository {
     required String fullName,
     required RegistrationType type,
     String? agencyName,
+    String? agencyEmail,
+    String? agencyPhone,
+    String? agencyAddress,
+    String? agencyCity,
+    String? agencyDescription,
   });
+  Future<Either<Failure, Unit>> resetPassword(String email);
   Future<Either<Failure, Unit>> logout();
 }
 

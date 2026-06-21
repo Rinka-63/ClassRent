@@ -12,6 +12,7 @@ class AdminNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <_NavItem>[
       const _NavItem(AppRoutes.admin, Icons.home_outlined, 'Home'),
+      const _NavItem(AppRoutes.roomManagement, Icons.meeting_room_outlined, 'Rooms'),
       const _NavItem(AppRoutes.bookingManagement, Icons.calendar_month_outlined, 'Booking'),
       const _NavItem(AppRoutes.adminHistory, Icons.history_outlined, 'History'),
       const _NavItem(AppRoutes.profile, Icons.person_outline, 'Profile'),

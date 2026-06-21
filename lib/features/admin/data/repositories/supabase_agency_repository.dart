@@ -32,16 +32,32 @@ class SupabaseAgencyRepository implements AgencyRepository {
   Future<Either<Failure, PlatformStats>> getPlatformStats() async {
     try {
       final agenciesResult = await getAgencies();
-      final agencies = agenciesResult.match((failure) => throw failure, (data) => data);
-      final users = await _service.requireClient
-          .from(SupabaseTables.users)
-          .select('id');
-      final rooms = await _service.requireClient
-          .from(SupabaseTables.rooms)
-          .select('id');
+      final agencies =
+          agenciesResult.match((failure) => throw failure, (data) => data);
+      final users =
+          await _service.requireClient.from(SupabaseTables.users).select('id');
+      final rooms =
+          await _service.requireClient.from(SupabaseTables.rooms).select('id');
       final bookings = await _service.requireClient
           .from(SupabaseTables.bookings)
           .select('id');
+      final payments = await _service.requireClient
+          .from(SupabaseTables.payments)
+          .select('gross_amount, transaction_status');
+
+      var pendingPayments = 0;
+      var completedPayments = 0;
+      var totalRevenue = 0.0;
+      for (final row in payments) {
+        final status =
+            (row['transaction_status'] as String? ?? 'pending').toLowerCase();
+        final amount = (row['gross_amount'] as num?)?.toDouble() ?? 0;
+        if (status == 'pending') pendingPayments++;
+        if (status == 'settlement' || status == 'capture') {
+          completedPayments++;
+          totalRevenue += amount;
+        }
+      }
 
       return right(
         PlatformStats(
@@ -50,9 +66,22 @@ class SupabaseAgencyRepository implements AgencyRepository {
               .where((agency) => agency.approvalStatus == 'pending')
               .length,
           activeAgencies: agencies.where((agency) => agency.isActive).length,
+          approvedAgencies: agencies
+              .where((agency) => agency.approvalStatus == 'approved')
+              .length,
+          suspendedAgencies: agencies
+              .where((agency) => agency.approvalStatus == 'suspended')
+              .length,
           totalUsers: users.length,
+          activeUsers: users.length,
+          pendingUsers: 0,
+          suspendedUsers: 0,
           totalRooms: rooms.length,
           totalBookings: bookings.length,
+          totalPayments: payments.length,
+          pendingPayments: pendingPayments,
+          completedPayments: completedPayments,
+          totalRevenue: totalRevenue,
         ),
       );
     } catch (error) {

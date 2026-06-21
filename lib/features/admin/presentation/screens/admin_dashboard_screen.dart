@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/constants/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_scaffold.dart';
+import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/app_scaffold.dart';
+import '../../../../features/booking/domain/entities/booking.dart';
+import '../../../../features/booking/presentation/providers/booking_admin_providers.dart';
 import '../../../../features/rooms/domain/entities/room.dart';
-import '../../../../shared/presentation/widgets/admin_nav_bar.dart';
+import '../../../../../shared/presentation/widgets/admin_nav_bar.dart';
 import '../providers/admin_overview_providers.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
@@ -16,6 +18,7 @@ class AdminDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roomsAsync = ref.watch(adminRoomsProvider);
+    final bookingsAsync = ref.watch(agencyBookingsProvider);
 
     return AppScaffold(
       title: 'Dashboard',
@@ -33,102 +36,103 @@ class AdminDashboardScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Stats grid menggabungkan data rooms + bookings nyata
+          _AsyncStatsGrid(roomsAsync: roomsAsync, bookingsAsync: bookingsAsync),
+          const SizedBox(height: 20),
+          // Booking analytics chart berdasarkan data booking real
+          _BookingAnalyticsCard(roomsAsync: roomsAsync, bookingsAsync: bookingsAsync),
+          const SizedBox(height: 20),
+          _SectionHeader(
+            title: 'Ruangan Terbaru',
+            actionLabel: 'Lihat semua',
+            onTap: () => context.push(AppRoutes.roomManagement),
+          ),
+          const SizedBox(height: 12),
           roomsAsync.when(
-            data: (rooms) {
-              final totals = _DashboardTotals.fromRooms(rooms);
-              return Column(
-                children: [
-                  _StatsGrid(totals: totals),
-                  const SizedBox(height: 20),
-                  _BookingAnalyticsCard(rooms: rooms),
-                  const SizedBox(height: 20),
-                  _SectionHeader(
-                    title: 'Recent Rooms',
-                    actionLabel: 'View all',
-                    onTap: () => context.push(AppRoutes.roomManagement),
+            data: (rooms) => rooms.isEmpty
+                ? const _EmptyRoomPanel()
+                : Column(
+                    children: rooms.take(5).map(_RoomCard.new).toList(),
                   ),
-                  const SizedBox(height: 12),
-                  if (rooms.isEmpty)
-                    const _EmptyRoomPanel()
-                  else
-                    ...rooms.take(5).map(_RoomCard.new),
-                  const SizedBox(height: 20),
-                  const _QuickActionsCard(),
-                ],
-              );
-            },
             loading: () => const Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: CircularProgressIndicator(),
               ),
             ),
-            error: (error, stackTrace) => Padding(
+            error: (error, _) => Padding(
               padding: const EdgeInsets.only(top: 20),
-              child: Text(error.toString(), style: const TextStyle(color: AppColors.error)),
+              child: Text(error.toString(),
+                  style: const TextStyle(color: AppColors.error)),
             ),
           ),
+          const SizedBox(height: 20),
+          const _QuickActionsCard(),
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
 }
 
-class _DashboardTotals {
-  const _DashboardTotals({
-    required this.totalBookings,
-    required this.availableSpaces,
-    required this.revenue,
-    required this.pendingPayments,
+// ─── Async Stats Grid ────────────────────────────────────────────────────────
+
+class _AsyncStatsGrid extends StatelessWidget {
+  const _AsyncStatsGrid({
+    required this.roomsAsync,
+    required this.bookingsAsync,
   });
 
-  factory _DashboardTotals.fromRooms(List<Room> rooms) {
-    final totalRooms = rooms.length;
-    final availableSpaces = rooms.where((room) => room.isActive).length;
-    final revenue = rooms.fold<double>(0, (sum, room) => sum + (room.hourlyRate * 4));
-    final pendingPayments = rooms.where((room) => room.requiresApproval).length;
-    return _DashboardTotals(
-      totalBookings: totalRooms * 18,
-      availableSpaces: availableSpaces,
-      revenue: revenue,
-      pendingPayments: pendingPayments,
-    );
-  }
-
-  final int totalBookings;
-  final int availableSpaces;
-  final double revenue;
-  final int pendingPayments;
-}
-
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.totals});
-
-  final _DashboardTotals totals;
+  final AsyncValue<List<Room>> roomsAsync;
+  final AsyncValue<List<Booking>> bookingsAsync;
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final currency =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+
+    final rooms = roomsAsync.valueOrNull ?? [];
+    final bookings = bookingsAsync.valueOrNull ?? [];
+
+    final totalBookings = bookings.length;
+    final availableRooms = rooms.where((r) => r.isActive).length;
+    final pendingBookings = bookings
+        .where((b) =>
+            b.status.toLowerCase().contains('pending'))
+        .length;
+    final totalRevenue = bookings
+        .where((b) =>
+            b.status == 'confirmed' ||
+            b.status == 'completed' ||
+            b.status == 'checked_in' ||
+            b.status == 'checked_out')
+        .fold<double>(0, (sum, b) => sum + b.finalPrice);
+
     final tiles = [
       _StatTile(
-        title: 'Total Bookings',
-        value: totals.totalBookings.toString(),
+        title: 'Total Booking',
+        value: totalBookings.toString(),
         icon: Icons.calendar_month_outlined,
+        isLoading:
+            roomsAsync.isLoading || bookingsAsync.isLoading,
       ),
       _StatTile(
-        title: 'Available Spaces',
-        value: totals.availableSpaces.toString(),
+        title: 'Ruangan Aktif',
+        value: availableRooms.toString(),
         icon: Icons.meeting_room_outlined,
+        isLoading: roomsAsync.isLoading,
       ),
       _StatTile(
-        title: 'Revenue',
-        value: currency.format(totals.revenue),
+        title: 'Total Pendapatan',
+        value: totalRevenue > 0 ? currency.format(totalRevenue) : 'Rp 0',
         icon: Icons.payments_outlined,
+        isLoading: bookingsAsync.isLoading,
       ),
       _StatTile(
-        title: 'Pending Payments',
-        value: totals.pendingPayments.toString(),
+        title: 'Menunggu Konfirmasi',
+        value: pendingBookings.toString(),
         icon: Icons.hourglass_bottom_outlined,
+        isLoading: bookingsAsync.isLoading,
       ),
     ];
 
@@ -147,16 +151,20 @@ class _StatsGrid extends StatelessWidget {
   }
 }
 
+// ─── Stat Tile ───────────────────────────────────────────────────────────────
+
 class _StatTile extends StatelessWidget {
   const _StatTile({
     required this.title,
     required this.value,
     required this.icon,
+    this.isLoading = false,
   });
 
   final String title;
   final String value;
   final IconData icon;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +193,12 @@ class _StatTile extends StatelessWidget {
               color: AppColors.primaryContainer.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: AppColors.primary),
+            child: isLoading
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(icon, color: AppColors.primary),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +207,7 @@ class _StatTile extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  value,
+                  isLoading ? '...' : value,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -217,14 +230,32 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _BookingAnalyticsCard extends StatelessWidget {
-  const _BookingAnalyticsCard({required this.rooms});
+// ─── Booking Analytics Card ──────────────────────────────────────────────────
 
-  final List<Room> rooms;
+class _BookingAnalyticsCard extends StatelessWidget {
+  const _BookingAnalyticsCard({
+    required this.roomsAsync,
+    required this.bookingsAsync,
+  });
+
+  final AsyncValue<List<Room>> roomsAsync;
+  final AsyncValue<List<Booking>> bookingsAsync;
 
   @override
   Widget build(BuildContext context) {
-    final maxCapacity = rooms.isEmpty ? 1 : rooms.map((room) => room.capacity).reduce((a, b) => a > b ? a : b);
+    final rooms = roomsAsync.valueOrNull ?? [];
+    final bookings = bookingsAsync.valueOrNull ?? [];
+
+    // Hitung booking per room
+    final bookingCountByRoom = <String, int>{};
+    for (final b in bookings) {
+      bookingCountByRoom[b.roomId] = (bookingCountByRoom[b.roomId] ?? 0) + 1;
+    }
+
+    final maxCount = bookingCountByRoom.values.isEmpty
+        ? 1
+        : bookingCountByRoom.values.reduce((a, b) => a > b ? a : b);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -246,57 +277,74 @@ class _BookingAnalyticsCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Booking Analytics',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                'Booking per Ruangan',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               Text(
-                'This Month',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.onSurfaceVariant),
+                'Semua waktu',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: AppColors.onSurfaceVariant),
               ),
             ],
           ),
           const SizedBox(height: 16),
           SizedBox(
             height: 140,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (final room in rooms.take(6))
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Container(
-                            height: 100 * (room.capacity / maxCapacity).clamp(0.3, 1.0),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+            child: rooms.isEmpty
+                ? const Center(child: Text('Belum ada ruangan'))
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: rooms.take(6).map((room) {
+                      final count = bookingCountByRoom[room.id] ?? 0;
+                      final ratio = maxCount > 0 ? count / maxCount : 0.1;
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                count.toString(),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                height: (90 * ratio.clamp(0.05, 1.0)).toDouble(),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                room.name.split(' ').first,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            room.name.split(' ').first,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                if (rooms.isEmpty)
-                  const Expanded(
-                    child: Center(child: Text('No rooms yet')),
-                  ),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 }
+
+// ─── Section Header ──────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
@@ -316,13 +364,18 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         TextButton(onPressed: onTap, child: Text(actionLabel)),
       ],
     );
   }
 }
+
+// ─── Room Card ───────────────────────────────────────────────────────────────
 
 class _RoomCard extends StatelessWidget {
   const _RoomCard(this.room);
@@ -335,135 +388,74 @@ class _RoomCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.outlineVariant),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 20,
-            offset: Offset(0, 8),
+            color: Color(0x0C000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 148,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.primaryContainer.withValues(alpha: 0.14),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.primaryContainer.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.meeting_room_outlined, color: AppColors.primary),
+        ),
+        title: Text(
+          room.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          '${(room.roomType ?? 'classroom').toUpperCase()} • ${room.city} • ${room.capacity} kursi',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: AppColors.onSurfaceVariant),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: room.isActive
+                    ? AppColors.secondary.withValues(alpha: 0.12)
+                    : AppColors.error.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                room.isActive ? 'Aktif' : 'Nonaktif',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: room.isActive ? AppColors.secondary : AppColors.error,
+                ),
+              ),
             ),
-            child: const Icon(Icons.meeting_room_outlined, size: 54, color: AppColors.primary),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        room.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    _StatusChip(
-                      label: room.isActive ? 'Active' : 'Inactive',
-                      color: room.isActive ? AppColors.primary : AppColors.error,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                      room.roomType == null ? 'ROOM' : room.roomType!.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _InfoPill(icon: Icons.people_outline, text: '${room.capacity} seats'),
-                    const SizedBox(width: 8),
-                    _InfoPill(icon: Icons.location_on_outlined, text: room.city),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0).format(room.hourlyRate),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.edit_outlined)),
-                        IconButton(onPressed: () {}, icon: const Icon(Icons.history_outlined)),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.primary),
-          const SizedBox(width: 6),
-          Text(text, style: Theme.of(context).textTheme.labelMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
+// ─── Empty Room Panel ─────────────────────────────────────────────────────────
 
 class _EmptyRoomPanel extends StatelessWidget {
   const _EmptyRoomPanel();
@@ -479,20 +471,27 @@ class _EmptyRoomPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.meeting_room_outlined, size: 48, color: AppColors.onSurfaceVariant),
+          const Icon(Icons.meeting_room_outlined,
+              size: 48, color: AppColors.onSurfaceVariant),
           const SizedBox(height: 12),
-          Text('No rooms available yet', style: Theme.of(context).textTheme.titleMedium),
+          Text('Belum ada ruangan',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
           Text(
-            'Use Room Management to add the first room for this agency.',
+            'Gunakan Room Management untuk menambahkan ruangan pertama.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.onSurfaceVariant),
           ),
         ],
       ),
     );
   }
 }
+
+// ─── Quick Actions Card ───────────────────────────────────────────────────────
 
 class _QuickActionsCard extends StatelessWidget {
   const _QuickActionsCard();
@@ -517,15 +516,34 @@ class _QuickActionsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quick Actions',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            'Aksi Cepat',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () => context.push(AppRoutes.roomManagement),
             icon: const Icon(Icons.add),
-            label: const Text('Add New Room'),
+            label: const Text('Tambah Ruangan Baru'),
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.bookingManagement),
+            icon: const Icon(Icons.book_outlined),
+            label: const Text('Kelola Booking'),
+            style:
+                OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.adminCoupons),
+            icon: const Icon(Icons.local_offer_outlined),
+            label: const Text('Kelola Kupon Diskon'),
+            style:
+                OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           ),
         ],
       ),

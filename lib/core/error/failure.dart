@@ -18,5 +18,9 @@ class PermissionFailure extends Failure {
 }
 
 class UnknownFailure extends Failure {
-  const UnknownFailure(super.message, {super.code});
+  const UnknownFailure(this.message) : super(message);
+  final String message;
+  
+  @override
+  String toString() => 'UnknownFailure: $message';
 }

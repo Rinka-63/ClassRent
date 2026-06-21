@@ -9,6 +9,7 @@ class SupabaseTables {
   static const roomImages = 'room_images';
   static const bookings = 'bookings';
   static const payments = 'payments';
+  static const coupons = 'coupons';
   static const reviews = 'reviews';
   static const notifications = 'notifications';
   static const userFavorites = 'user_favorites';
