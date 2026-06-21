@@ -10,3 +10,4 @@ build/
 docs/.blueprint_docx/
 docs/blueprint.zip
 *.log
+.env
