@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/widgets/empty_state.dart';
 import '../../../../../core/widgets/error_card.dart';
 import '../../../domain/entities/audit_log_entry.dart';
@@ -28,6 +29,7 @@ class _SuperAdminAuditLogTabState extends ConsumerState<SuperAdminAuditLogTab> {
   Widget build(BuildContext context) {
     final logsAsync = ref.watch(platformAuditLogsProvider);
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm:ss');
+    final strings = AppStrings.of(context);
 
     return logsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -49,18 +51,36 @@ class _SuperAdminAuditLogTabState extends ConsumerState<SuperAdminAuditLogTab> {
             padding: const EdgeInsets.all(16),
             children: [
               SuperAdminListControls(
-                searchHint: 'Cari aktivitas, user, entity...',
+                searchHint: strings.searchActivitiesHint,
                 onSearchChanged: (value) => setState(() {
                   _search = value.toLowerCase();
                   _page = 0;
                 }),
-                filterOptions: const [
-                  'Login',
-                  'Agency',
-                  'Room',
-                  'User',
-                  'Booking',
-                  'Payment',
+                filterOptions: [
+                  SuperAdminFilterOption(
+                    value: 'auth',
+                    label: strings.tr('Masuk/Keluar', 'Sign in/out'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'agency',
+                    label: strings.agency,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'room',
+                    label: strings.rooms,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'user',
+                    label: strings.users,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'booking',
+                    label: strings.bookings,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'payment',
+                    label: strings.payments,
+                  ),
                 ],
                 selectedFilter: _filter,
                 onFilterChanged: (value) => setState(() {
@@ -72,10 +92,16 @@ class _SuperAdminAuditLogTabState extends ConsumerState<SuperAdminAuditLogTab> {
               ),
               const SizedBox(height: 16),
               if (filtered.isEmpty)
-                const EmptyState(title: 'Audit log kosong')
+                EmptyState(
+                  title: strings.tr('Audit log kosong', 'Audit log is empty'),
+                )
               else ...[
                 for (final log in paged) ...[
-                  _AuditLogTile(log: log, dateFormat: dateFormat),
+                  _AuditLogTile(
+                    log: log,
+                    dateFormat: dateFormat,
+                    strings: strings,
+                  ),
                   const SizedBox(height: 12),
                 ],
                 SuperAdminPaginationBar(
@@ -106,12 +132,12 @@ class _SuperAdminAuditLogTabState extends ConsumerState<SuperAdminAuditLogTab> {
         final action = log.action.toLowerCase();
         final entity = log.entityType.toLowerCase();
         return switch (_filter) {
-          'Login' => action.contains('login') || action.contains('logout'),
-          'Agency' => entity.contains('agency') || action.contains('agency'),
-          'Room' => entity.contains('room') || action.contains('room'),
-          'User' => entity.contains('user') || action.contains('user'),
-          'Booking' => entity.contains('booking') || action.contains('booking'),
-          'Payment' => entity.contains('payment') || action.contains('payment'),
+          'auth' => action.contains('login') || action.contains('logout'),
+          'agency' => entity.contains('agency') || action.contains('agency'),
+          'room' => entity.contains('room') || action.contains('room'),
+          'user' => entity.contains('user') || action.contains('user'),
+          'booking' => entity.contains('booking') || action.contains('booking'),
+          'payment' => entity.contains('payment') || action.contains('payment'),
           _ => true,
         };
       }).toList();
@@ -131,10 +157,15 @@ class _SuperAdminAuditLogTabState extends ConsumerState<SuperAdminAuditLogTab> {
 }
 
 class _AuditLogTile extends StatelessWidget {
-  const _AuditLogTile({required this.log, required this.dateFormat});
+  const _AuditLogTile({
+    required this.log,
+    required this.dateFormat,
+    required this.strings,
+  });
 
   final AuditLogEntry log;
   final DateFormat dateFormat;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -187,19 +218,23 @@ class _AuditLogTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                _Line('Waktu', dateFormat.format(log.createdAt)),
-                _Line('Pelaku', log.actorName ?? log.actorId ?? '-'),
-                _Line('Role', log.actorRole ?? '-'),
-                _Line('Target', log.entityLabel ?? _titleCase(log.entityType)),
+                _Line(strings.time, dateFormat.format(log.createdAt)),
+                _Line(strings.actor,
+                    log.actorName ?? _formatActorId(log.actorId)),
+                _Line(strings.role, log.actorRole ?? '-'),
+                _Line(
+                    strings.target,
+                    log.entityLabel ??
+                        _formatEntityType(log.entityType, log.entityId)),
                 if (changes.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
                     childrenPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Detail Perubahan',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    title: Text(
+                      strings.details,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     children: [
                       for (final change in changes)
@@ -262,6 +297,29 @@ class _AuditLogTile extends StatelessWidget {
   }
 
   String _fieldLabel(String key) {
+    const labels = {
+      'full_name': 'Nama',
+      'phone': 'Telepon',
+      'email': 'Email',
+      'name': 'Nama',
+      'description': 'Deskripsi',
+      'room_type': 'Tipe Ruangan',
+      'capacity': 'Kapasitas',
+      'hourly_rate': 'Tarif Per Jam',
+      'daily_rate': 'Tarif Harian',
+      'city': 'Kota',
+      'address': 'Alamat',
+      'is_active': 'Status Aktif',
+      'requires_approval': 'Perlu Persetujuan',
+      'account_status': 'Status Akun',
+      'approval_status': 'Status Approval',
+      'role': 'Peran',
+      'search_vector': 'Kata Kunci Pencarian',
+      'preview_url': 'Foto Utama',
+      'logo_url': 'Logo',
+    };
+    final mapped = labels[key.toLowerCase()];
+    if (mapped != null) return mapped;
     return key
         .split('_')
         .where((part) => part.isNotEmpty)
@@ -273,9 +331,51 @@ class _AuditLogTile extends StatelessWidget {
     if (value == null) return '-';
     if (value is DateTime) return dateFormat.format(value);
     if (value is Map || value is List) return 'Data detail tersedia';
+    if (value is bool) return value ? 'Ya' : 'Tidak';
     final text = value.toString();
+    const values = {
+      'true': 'Ya',
+      'false': 'Tidak',
+      'classroom': 'Ruang Kelas',
+      'meeting_room': 'Ruang Rapat',
+      'studio': 'Studio',
+      'hall': 'Aula',
+      'active': 'Aktif',
+      'inactive': 'Tidak Aktif',
+      'suspended': 'Disuspend',
+      'disabled': 'Dinonaktifkan',
+      'deleted': 'Dihapus',
+      'pending': 'Menunggu',
+      'approved': 'Disetujui',
+      'rejected': 'Ditolak',
+      'user': 'Pengguna',
+      'ADMIN': 'Admin Agensi',
+      'SUPER_ADMIN': 'Super Admin',
+      'admin': 'Admin Agensi',
+      'super_admin': 'Super Admin',
+    };
+    final mapped = values[text];
+    if (mapped != null) return mapped;
     if (text.length > 80) return '${text.substring(0, 80)}...';
     return text;
+  }
+
+  String _formatActorId(String? actorId) {
+    if (actorId == null) return '-';
+    // If it's a UUID, show a shortened version
+    if (actorId.length == 36 && actorId.contains('-')) {
+      return '${actorId.substring(0, 8)}...';
+    }
+    return actorId;
+  }
+
+  String _formatEntityType(String? entityType, String? entityId) {
+    if (entityType == null) return '-';
+    final type = _titleCase(entityType);
+    if (entityId != null && entityId.length == 36 && entityId.contains('-')) {
+      return '$type (${entityId.substring(0, 8)}...)';
+    }
+    return type;
   }
 }
 
@@ -294,34 +394,35 @@ class _AuditDescriptor {
 
   factory _AuditDescriptor.from(AuditLogEntry log) {
     final action = log.action.toLowerCase();
+    final title = _actionTitle(action);
     if (action.contains('booking')) {
       return const _AuditDescriptor(
-        title: 'Booking Dibuat / Diperbarui',
-        badge: 'Booking',
+        title: 'Pesanan Dibuat / Diperbarui',
+        badge: 'Pesanan',
         icon: Icons.event_note_outlined,
         color: AppColors.primary,
       );
     }
     if (action.contains('payment')) {
       return const _AuditDescriptor(
-        title: 'Payment Diperbarui',
-        badge: 'Payment',
+        title: 'Pembayaran Diperbarui',
+        badge: 'Pembayaran',
         icon: Icons.payments_outlined,
         color: AppColors.secondary,
       );
     }
     if (action.contains('password')) {
       return const _AuditDescriptor(
-        title: 'Password Reset',
-        badge: 'Security',
+        title: 'Reset Kata Sandi',
+        badge: 'Keamanan',
         icon: Icons.lock_reset_outlined,
         color: AppColors.tertiary,
       );
     }
     if (action.contains('agency')) {
       return _AuditDescriptor(
-        title: _titleCase(action.replaceAll('_', ' ')),
-        badge: 'Agency',
+        title: title,
+        badge: 'Agensi',
         icon: Icons.apartment_outlined,
         color: action.contains('reject') || action.contains('suspend')
             ? AppColors.error
@@ -330,8 +431,8 @@ class _AuditDescriptor {
     }
     if (action.contains('user') || action.contains('role')) {
       return _AuditDescriptor(
-        title: _titleCase(action.replaceAll('_', ' ')),
-        badge: 'User',
+        title: title,
+        badge: 'Pengguna',
         icon: Icons.person_outline,
         color: action.contains('suspend') || action.contains('disable')
             ? AppColors.error
@@ -340,19 +441,38 @@ class _AuditDescriptor {
     }
     if (action.contains('login') || action.contains('logout')) {
       return const _AuditDescriptor(
-        title: 'Login / Logout',
-        badge: 'Auth',
+        title: 'Masuk / Keluar',
+        badge: 'Autentikasi',
         icon: Icons.login_outlined,
         color: AppColors.primary,
       );
     }
     return _AuditDescriptor(
-      title: _titleCase(action.replaceAll('_', ' ')),
+      title: title,
       badge: _titleCase(log.entityType),
       icon: Icons.history_outlined,
       color: AppColors.onSurfaceVariant,
     );
   }
+}
+
+String _actionTitle(String action) {
+  const titles = {
+    'login': 'Masuk',
+    'logout': 'Keluar',
+    'user_updated': 'Pengguna Diperbarui',
+    'agency_updated': 'Agensi Diperbarui',
+    'agency_approved': 'Agensi Disetujui',
+    'agency_rejected': 'Agensi Ditolak',
+    'agency_suspended': 'Agensi Disuspen',
+    'agency_reactivated': 'Agensi Diaktifkan',
+    'agency_deleted': 'Agensi Dihapus',
+    'room_updated': 'Ruangan Diperbarui',
+    'room_deleted': 'Ruangan Dihapus',
+    'password_reset_requested': 'Reset Kata Sandi Diminta',
+    'agency_ownership_transferred': 'Kepemilikan Agensi Dipindahkan',
+  };
+  return titles[action] ?? _titleCase(action.replaceAll('_', ' '));
 }
 
 class _HumanChange {
