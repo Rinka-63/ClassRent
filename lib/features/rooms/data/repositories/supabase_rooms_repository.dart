@@ -71,7 +71,8 @@ class SupabaseRoomsRepository implements RoomsRepository {
   }
 
   @override
-  Future<Either<Failure, Room>> updateRoom(String id, Map<String, dynamic> payload) async {
+  Future<Either<Failure, Room>> updateRoom(
+      String id, Map<String, dynamic> payload) async {
     try {
       final row = await _service.requireClient
           .from(SupabaseTables.rooms)
@@ -88,10 +89,10 @@ class SupabaseRoomsRepository implements RoomsRepository {
   @override
   Future<Either<Failure, Unit>> deleteRoom(String id) async {
     try {
-      await _service.requireClient
-          .from(SupabaseTables.rooms)
-        .update({'deleted_at': DateTime.now().toIso8601String(), 'is_active': false})
-        .eq('id', id);
+      await _service.requireClient.from(SupabaseTables.rooms).update({
+        'deleted_at': DateTime.now().toIso8601String(),
+        'is_active': false
+      }).eq('id', id);
       return right(unit);
     } catch (error) {
       return left(UnknownFailure(error.toString()));
@@ -99,7 +100,8 @@ class SupabaseRoomsRepository implements RoomsRepository {
   }
 
   @override
-  Future<Either<Failure, List<Map<String, dynamic>>>> getRoomSchedules(String roomId) async {
+  Future<Either<Failure, List<Map<String, dynamic>>>> getRoomSchedules(
+      String roomId) async {
     try {
       final rows = await _service.requireClient
           .from('room_schedules')
@@ -124,10 +126,12 @@ class SupabaseRoomsRepository implements RoomsRepository {
           .eq('room_id', roomId);
       if (schedules.isNotEmpty) {
         final payload = schedules
-            .map((item) => {
-                  ...item,
-                  'room_id': roomId,
-                },)
+            .map(
+              (item) => {
+                ...item,
+                'room_id': roomId,
+              },
+            )
             .toList();
         await _service.requireClient.from('room_schedules').insert(payload);
       }
@@ -163,15 +167,67 @@ class SupabaseRoomsRepository implements RoomsRepository {
           .eq('room_id', roomId);
       if (facilities.isNotEmpty) {
         await _service.requireClient.from(SupabaseTables.roomFacilities).insert(
-          facilities
-              .map(
-                (facility) => {
-                  'room_id': roomId,
-                  'facility_tag': facility.trim(),
-                },
-              )
-              .toList(),
-        );
+              facilities
+                  .map(
+                    (facility) => {
+                      'room_id': roomId,
+                      'facility_tag': facility.trim(),
+                    },
+                  )
+                  .toList(),
+            );
+      }
+      return right(unit);
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<String>>> getRoomImages(String roomId) async {
+    try {
+      final rows = await _service.requireClient
+          .from(SupabaseTables.roomImages)
+          .select('original_url')
+          .eq('room_id', roomId)
+          .order('display_order', ascending: true);
+      return right(
+        rows
+            .map((row) => row['original_url']?.toString())
+            .whereType<String>()
+            .toList(),
+      );
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> saveRoomImages(
+    String roomId,
+    List<String> imageUrls,
+  ) async {
+    try {
+      await _service.requireClient
+          .from(SupabaseTables.roomImages)
+          .delete()
+          .eq('room_id', roomId);
+      if (imageUrls.isNotEmpty) {
+        await _service.requireClient.from(SupabaseTables.roomImages).insert(
+              imageUrls
+                  .asMap()
+                  .entries
+                  .map(
+                    (entry) => {
+                      'room_id': roomId,
+                      'original_url': entry.value,
+                      'thumbnail_url': entry.value,
+                      'display_order': entry.key,
+                      'is_primary': entry.key == 0,
+                    },
+                  )
+                  .toList(),
+            );
       }
       return right(unit);
     } catch (error) {
