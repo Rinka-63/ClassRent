@@ -8,9 +8,11 @@ abstract interface class RoomsRepository {
   Future<Either<Failure, Room>> getRoomById(String id);
   Future<Either<Failure, List<Room>>> getRoomsByAdminId(String adminId);
   Future<Either<Failure, Room>> createRoom(Map<String, dynamic> payload);
-  Future<Either<Failure, Room>> updateRoom(String id, Map<String, dynamic> payload);
+  Future<Either<Failure, Room>> updateRoom(
+      String id, Map<String, dynamic> payload);
   Future<Either<Failure, Unit>> deleteRoom(String id);
-  Future<Either<Failure, List<Map<String, dynamic>>>> getRoomSchedules(String roomId);
+  Future<Either<Failure, List<Map<String, dynamic>>>> getRoomSchedules(
+      String roomId);
   Future<Either<Failure, Unit>> saveRoomSchedules(
     String roomId,
     List<Map<String, dynamic>> schedules,
@@ -19,5 +21,10 @@ abstract interface class RoomsRepository {
   Future<Either<Failure, Unit>> saveRoomFacilities(
     String roomId,
     List<String> facilities,
+  );
+  Future<Either<Failure, List<String>>> getRoomImages(String roomId);
+  Future<Either<Failure, Unit>> saveRoomImages(
+    String roomId,
+    List<String> imageUrls,
   );
 }
