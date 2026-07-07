@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/empty_state.dart';
 import '../../../../../core/widgets/error_card.dart';
@@ -27,6 +28,7 @@ class _SuperAdminAgencyTabState extends ConsumerState<SuperAdminAgencyTab> {
   @override
   Widget build(BuildContext context) {
     final agenciesAsync = ref.watch(agenciesProvider);
+    final strings = AppStrings.of(context);
 
     return agenciesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -48,16 +50,28 @@ class _SuperAdminAgencyTabState extends ConsumerState<SuperAdminAgencyTab> {
             padding: const EdgeInsets.all(16),
             children: [
               SuperAdminListControls(
-                searchHint: 'Cari agency...',
+                searchHint: strings.searchAgencyHint,
                 onSearchChanged: (value) => setState(() {
                   _search = value.toLowerCase();
                   _page = 0;
                 }),
-                filterOptions: const [
-                  'Approved',
-                  'Suspended',
-                  'Pending',
-                  'Rejected',
+                filterOptions: [
+                  SuperAdminFilterOption(
+                    value: 'approved',
+                    label: strings.tr('Disetujui', 'Approved'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'suspended',
+                    label: strings.tr('Disuspen', 'Suspended'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'pending',
+                    label: strings.tr('Menunggu', 'Pending'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'rejected',
+                    label: strings.tr('Ditolak', 'Rejected'),
+                  ),
                 ],
                 selectedFilter: _filter,
                 onFilterChanged: (value) => setState(() {
@@ -69,9 +83,15 @@ class _SuperAdminAgencyTabState extends ConsumerState<SuperAdminAgencyTab> {
               ),
               const SizedBox(height: 16),
               if (filtered.isEmpty)
-                const EmptyState(
-                  title: 'Agency tidak ditemukan',
-                  message: 'Coba ubah kata kunci atau filter pencarian.',
+                EmptyState(
+                  title: strings.tr(
+                    'Agensi tidak ditemukan',
+                    'No agencies found',
+                  ),
+                  message: strings.tr(
+                    'Coba ubah kata kunci atau filter pencarian.',
+                    'Try changing the keyword or search filter.',
+                  ),
                 )
               else ...[
                 if (_filter == null) ...[
@@ -98,8 +118,6 @@ class _SuperAdminAgencyTabState extends ConsumerState<SuperAdminAgencyTab> {
                             SuperAdminAgencyDetailScreen(agencyId: agency.id),
                       ),
                     ),
-                    onEdit: () => _editAgency(context, agency),
-                    onDelete: () => _deleteAgency(context, agency),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -128,11 +146,11 @@ class _SuperAdminAgencyTabState extends ConsumerState<SuperAdminAgencyTab> {
     if (_filter != null) {
       result = result.where((agency) {
         return switch (_filter) {
-          'Approved' => agency.approvalStatus == 'approved' && agency.isActive,
-          'Suspended' =>
+          'approved' => agency.approvalStatus == 'approved' && agency.isActive,
+          'suspended' =>
             agency.approvalStatus == 'suspended' || !agency.isActive,
-          'Pending' => agency.approvalStatus == 'pending',
-          'Rejected' => agency.approvalStatus == 'rejected',
+          'pending' => agency.approvalStatus == 'pending',
+          'rejected' => agency.approvalStatus == 'rejected',
           _ => true,
         };
       }).toList();
@@ -153,96 +171,16 @@ class _SuperAdminAgencyTabState extends ConsumerState<SuperAdminAgencyTab> {
 
     return result;
   }
-
-  Future<void> _editAgency(BuildContext context, Agency agency) async {
-    final nameController = TextEditingController(text: agency.name);
-    final emailController = TextEditingController(text: agency.email ?? '');
-    final phoneController = TextEditingController(text: agency.phone ?? '');
-    final addressController = TextEditingController(text: agency.address ?? '');
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit Agency'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nama')),
-              TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(labelText: 'Email')),
-              TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(labelText: 'Telepon')),
-              TextField(
-                  controller: addressController,
-                  decoration: const InputDecoration(labelText: 'Alamat')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Simpan')),
-        ],
-      ),
-    );
-
-    if (saved == true) {
-      await ref.read(superAdminRepositoryProvider).updateAgency(agency.id, {
-        'name': nameController.text.trim(),
-        'email': emailController.text.trim(),
-        'phone': phoneController.text.trim(),
-        'address': addressController.text.trim(),
-      });
-      invalidateSuperAdminData(ref);
-    }
-  }
-
-  Future<void> _deleteAgency(BuildContext context, Agency agency) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Nonaktifkan Agency?'),
-        content: Text('Agency "${agency.name}" akan dinonaktifkan.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Nonaktifkan')),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await ref
-          .read(superAdminRepositoryProvider)
-          .setAgencyActive(agency.id, false);
-      invalidateSuperAdminData(ref);
-    }
-  }
 }
 
 class _AgencyListTile extends ConsumerWidget {
   const _AgencyListTile({
     required this.agency,
     required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
   });
 
   final Agency agency;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -302,16 +240,11 @@ class _AgencyListTile extends ConsumerWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                _MetricBadge(label: '${agency.roomCount} Room'),
+                _MetricBadge(label: '${agency.roomCount} Ruangan'),
                 const SizedBox(width: 8),
-                _MetricBadge(label: '${agency.bookingCount} Booking'),
+                _MetricBadge(label: '${agency.bookingCount} Pesanan'),
                 const Spacer(),
                 _AgencyActionMenu(agency: agency),
-                IconButton(
-                    onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
-                IconButton(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.block_outlined)),
               ],
             ),
           ],
@@ -346,7 +279,7 @@ class _PendingRegistrationsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pending Registrations',
+            'Pendaftaran Menunggu',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -367,7 +300,7 @@ class _PendingRegistrationsSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   const SuperAdminStatusChip(
-                    label: 'Pending',
+                    label: 'Menunggu',
                     color: AppColors.primary,
                   ),
                   const SizedBox(height: 4),
@@ -394,32 +327,71 @@ class _AgencyActionMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     return PopupMenuButton<String>(
-      tooltip: 'Aksi agency',
+      tooltip: strings.tr('Aksi agensi', 'Agency actions'),
       icon: const Icon(Icons.more_vert),
       onSelected: (value) async {
         final repository = ref.read(superAdminRepositoryProvider);
-        if (value == 'approve') {
-          await repository.approveAgency(agency.id);
-        } else if (value == 'reject') {
-          await repository.rejectAgency(agency.id);
-        } else if (value == 'suspend') {
-          await repository.suspendAgency(agency.id);
+        Object? result;
+        String successMessage =
+            strings.tr('Aksi agensi berhasil.', 'Agency action completed.');
+        if (value == 'suspend') {
+          result = await repository.suspendAgency(agency.id);
+          successMessage = strings.tr(
+            'Agensi berhasil disuspen.',
+            'Agency suspended successfully.',
+          );
+        } else if (value == 'ban') {
+          result = await repository.rejectAgency(agency.id);
+          successMessage = strings.tr(
+            'Agensi berhasil diblokir.',
+            'Agency banned successfully.',
+          );
         } else if (value == 'reactivate') {
-          await repository.reactivateAgency(agency.id);
+          result = await repository.reactivateAgency(agency.id);
+          successMessage = strings.tr(
+            'Agensi berhasil diaktifkan kembali.',
+            'Agency reactivated successfully.',
+          );
         }
-        invalidateSuperAdminData(ref);
+        if (!context.mounted || result == null) return;
+        final either = result as dynamic;
+        either.match(
+          (failure) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(failure.message)),
+          ),
+          (_) {
+            invalidateSuperAdminData(ref);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(successMessage)),
+            );
+          },
+        );
       },
-      itemBuilder: (context) => [
-        if (agency.approvalStatus != 'approved' || !agency.isActive)
-          const PopupMenuItem(value: 'approve', child: Text('Approve')),
-        if (agency.approvalStatus == 'pending')
-          const PopupMenuItem(value: 'reject', child: Text('Reject')),
-        if (agency.approvalStatus == 'approved' && agency.isActive)
-          const PopupMenuItem(value: 'suspend', child: Text('Suspend')),
-        if (agency.approvalStatus == 'suspended' || !agency.isActive)
-          const PopupMenuItem(value: 'reactivate', child: Text('Reactivate')),
-      ],
+      itemBuilder: (context) {
+        final canReactivate = agency.approvalStatus == 'suspended' ||
+            agency.approvalStatus == 'rejected' ||
+            !agency.isActive;
+
+        return [
+          if (canReactivate)
+            PopupMenuItem(
+              value: 'reactivate',
+              child: Text(strings.tr('Aktifkan kembali', 'Reactivate')),
+            )
+          else ...[
+            PopupMenuItem(
+              value: 'suspend',
+              child: Text(strings.tr('Disuspen', 'Suspend')),
+            ),
+            PopupMenuItem(
+              value: 'ban',
+              child: Text(strings.tr('Blokir', 'Ban')),
+            ),
+          ],
+        ];
+      },
     );
   }
 }
