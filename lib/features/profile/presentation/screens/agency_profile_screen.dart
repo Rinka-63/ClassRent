@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_scaffold.dart';
+import '../../../../core/widgets/loading_view.dart';
 import '../../../admin/presentation/providers/super_admin_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
@@ -9,7 +11,8 @@ class AgencyProfileScreen extends ConsumerStatefulWidget {
   const AgencyProfileScreen({super.key});
 
   @override
-  ConsumerState<AgencyProfileScreen> createState() => _AgencyProfileScreenState();
+  ConsumerState<AgencyProfileScreen> createState() =>
+      _AgencyProfileScreenState();
 }
 
 class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
@@ -20,7 +23,6 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _logoUrlController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -56,7 +58,6 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
           _addressController.text = agency.address ?? '';
           _cityController.text = agency.city ?? '';
           _descriptionController.text = agency.description ?? '';
-          _logoUrlController.text = agency.logoUrl ?? '';
         },
       );
     } finally {
@@ -72,11 +73,11 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
     _addressController.dispose();
     _cityController.dispose();
     _descriptionController.dispose();
-    _logoUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _saveProfile() async {
+    final strings = AppStrings.of(context);
     if (!_formKey.currentState!.validate()) return;
 
     final user = ref.read(currentUserProvider);
@@ -91,7 +92,6 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
         'address': _addressController.text.trim(),
         'city': _cityController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'logo_url': _logoUrlController.text.trim(),
       };
 
       final result = await ref
@@ -105,7 +105,14 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
           ),
           (_) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Agency profile updated successfully.')),
+              SnackBar(
+                content: Text(
+                  strings.tr(
+                    'Profil agensi berhasil diperbarui.',
+                    'Agency profile updated successfully.',
+                  ),
+                ),
+              ),
             );
             invalidateSuperAdminData(ref);
             ref.invalidate(agencyDetailProvider(user.agencyId!));
@@ -119,10 +126,17 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
     return AppScaffold(
-      title: 'Agency Profile',
+      title: strings.tr('Profil Agensi', 'Agency Profile'),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? LoadingView(
+              message: strings.tr(
+                'Memuat profil agensi...',
+                'Loading agency profile...',
+              ),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -130,80 +144,181 @@ class _AgencyProfileScreenState extends ConsumerState<AgencyProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Agency Name',
-                        prefixIcon: Icon(Icons.business),
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Name is required'
-                          : null,
-                    ),
+                    const _AgencyHeroCard(),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _logoUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Logo URL',
-                        prefixIcon: Icon(Icons.image),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone',
-                        prefixIcon: Icon(Icons.phone),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Address',
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _cityController,
-                      decoration: const InputDecoration(
-                        labelText: 'City',
-                        prefixIcon: Icon(Icons.location_city),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        alignLabelWithHint: true,
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.only(bottom: 50),
-                          child: Icon(Icons.description),
+                    _FormSection(
+                      title: strings.tr('Identitas Agensi', 'Agency Identity'),
+                      children: [
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: strings.tr('Nama Agensi', 'Agency Name'),
+                            prefixIcon: const Icon(Icons.business),
+                          ),
+                          validator: (v) => v == null || v.trim().isEmpty
+                              ? strings.tr(
+                                  'Nama agensi wajib diisi',
+                                  'Agency name is required',
+                                )
+                              : null,
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _descriptionController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            labelText: strings.tr('Deskripsi', 'Description'),
+                            alignLabelWithHint: true,
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(bottom: 50),
+                              child: Icon(Icons.description_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _FormSection(
+                      title: strings.tr('Kontak & Lokasi', 'Contact & Location'),
+                      children: [
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            labelText: strings.tr('Email', 'Email'),
+                            prefixIcon: const Icon(Icons.email_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: strings.profilePhone,
+                            prefixIcon: const Icon(Icons.phone_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _addressController,
+                          decoration: InputDecoration(
+                            labelText: strings.address,
+                            prefixIcon: const Icon(Icons.location_on_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _cityController,
+                          decoration: InputDecoration(
+                            labelText: strings.city,
+                            prefixIcon: const Icon(Icons.location_city_outlined),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 32),
                     FilledButton(
                       onPressed: _saveProfile,
-                      child: const Text('Save Changes'),
+                      child: Text(strings.tr('Simpan Perubahan', 'Save Changes')),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _AgencyHeroCard extends StatelessWidget {
+  const _AgencyHeroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xff153f9f)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.business_center_outlined,
+                color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.tr('Identitas Agensi', 'Agency Identity'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  strings.tr(
+                    'Lengkapi informasi agar profil agensi terlihat tepercaya di ClassRent.',
+                    'Complete the information so your agency profile looks trustworthy on ClassRent.',
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.82),
+                        height: 1.35,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormSection extends StatelessWidget {
+  const _FormSection({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
     );
   }
 }
