@@ -45,7 +45,7 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<Set<String>>> {
       state = AsyncValue.data(Set.from(currentSet)..add(roomId));
     }
 
-    final result = await _repository.toggleFavorite(_userId!, roomId);
+    final result = await _repository.toggleFavorite(_userId, roomId);
     
     result.fold(
       (failure) {
