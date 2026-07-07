@@ -4,6 +4,7 @@ import '../../../../../core/supabase/supabase_client_provider.dart';
 import '../../../../../core/supabase/supabase_service.dart';
 import '../../data/repositories/supabase_super_admin_repository.dart';
 import '../../domain/entities/agency.dart';
+import '../../domain/entities/agency_withdrawal.dart';
 import '../../domain/entities/audit_log_entry.dart';
 import '../../domain/entities/platform_analytics.dart';
 import '../../domain/entities/platform_payment.dart';
@@ -21,12 +22,15 @@ final superAdminRepositoryProvider = Provider<SuperAdminRepository>((ref) {
 final superAdminTabIndexProvider = StateProvider<int>((ref) => 0);
 
 final platformStatsProvider = FutureProvider<PlatformStats>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getPlatformStats();
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getPlatformStats();
   return result.match((failure) => throw failure, (stats) => stats);
 });
 
-final platformAnalyticsProvider = FutureProvider<PlatformAnalytics>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getPlatformAnalytics();
+final platformAnalyticsProvider =
+    FutureProvider<PlatformAnalytics>((ref) async {
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getPlatformAnalytics();
   return result.match((failure) => throw failure, (data) => data);
 });
 
@@ -35,34 +39,49 @@ final agenciesProvider = FutureProvider<List<Agency>>((ref) async {
   return result.match((failure) => throw failure, (agencies) => agencies);
 });
 
-final agencyDetailProvider = FutureProvider.family<Agency, String>((ref, id) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getAgencyDetail(id);
+final agencyDetailProvider =
+    FutureProvider.family<Agency, String>((ref, id) async {
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getAgencyDetail(id);
   return result.match((failure) => throw failure, (agency) => agency);
 });
 
 final platformUsersProvider = FutureProvider<List<PlatformUser>>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getPlatformUsers();
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getPlatformUsers();
   return result.match((failure) => throw failure, (users) => users);
 });
 
 final platformUserDetailProvider =
     FutureProvider.family<PlatformUser, String>((ref, id) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getPlatformUserDetail(id);
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getPlatformUserDetail(id);
   return result.match((failure) => throw failure, (user) => user);
 });
 
 final platformRoomsProvider = FutureProvider<List<PlatformRoom>>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getPlatformRooms();
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getPlatformRooms();
   return result.match((failure) => throw failure, (rooms) => rooms);
 });
 
 final platformRoomDetailProvider =
     FutureProvider.family<PlatformRoom, String>((ref, id) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getPlatformRoomDetail(id);
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getPlatformRoomDetail(id);
   return result.match((failure) => throw failure, (room) => room);
 });
 
-final platformAuditLogsProvider = FutureProvider<List<AuditLogEntry>>((ref) async {
+final platformPaymentsProvider =
+    FutureProvider<List<PlatformPayment>>((ref) async {
+  final result = await ref
+      .watch(superAdminRepositoryProvider)
+      .getRecentPayments(limit: 1000);
+  return result.match((failure) => throw failure, (payments) => payments);
+});
+
+final platformAuditLogsProvider =
+    FutureProvider<List<AuditLogEntry>>((ref) async {
   final result = await ref.watch(superAdminRepositoryProvider).getAuditLogs();
   return result.match((failure) => throw failure, (logs) => logs);
 });
@@ -73,28 +92,42 @@ final recentUsersProvider = FutureProvider<List<PlatformUser>>((ref) async {
 });
 
 final recentAgenciesProvider = FutureProvider<List<Agency>>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getRecentAgencies();
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getRecentAgencies();
   return result.match((failure) => throw failure, (agencies) => agencies);
 });
 
-final recentPaymentsProvider = FutureProvider<List<PlatformPayment>>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getRecentPayments();
+final recentPaymentsProvider =
+    FutureProvider<List<PlatformPayment>>((ref) async {
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getRecentPayments();
   return result.match((failure) => throw failure, (payments) => payments);
 });
 
 final recentBookingsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final result = await ref.watch(superAdminRepositoryProvider).getRecentBookings();
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getRecentBookings();
   return result.match((failure) => throw failure, (bookings) => bookings);
 });
 
+final agencyWithdrawalsProvider =
+    FutureProvider<List<AgencyWithdrawal>>((ref) async {
+  final result =
+      await ref.watch(superAdminRepositoryProvider).getAgencyWithdrawals();
+  return result.match((failure) => throw failure, (withdrawals) => withdrawals);
+});
+
 final userBookingsProvider =
-    FutureProvider.family<List<Map<String, dynamic>>, String>((ref, userId) async {
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, userId) async {
   final client = ref.watch(supabaseClientProvider);
   if (client == null) return const [];
   final rows = await client
       .from('bookings')
-      .select('id,room_id,booking_date,status,final_price,created_at,rooms(name)')
+      .select(
+        'id,room_id,booking_date,status,final_price,created_at,rooms(name)',
+      )
       .eq('user_id', userId)
       .order('created_at', ascending: false)
       .limit(20);
@@ -107,7 +140,7 @@ final userPaymentsProvider =
   if (client == null) return const [];
   final rows = await client
       .from('payments')
-      .select('id,booking_id,user_id,gross_amount,transaction_status,payment_method,created_at')
+      .select('id,booking_id,user_id,amount,status,payment_method,created_at')
       .eq('user_id', userId)
       .order('created_at', ascending: false)
       .limit(20);
@@ -117,8 +150,8 @@ final userPaymentsProvider =
           id: row['id'] as String,
           bookingId: row['booking_id'] as String,
           userId: row['user_id'] as String,
-          amount: (row['gross_amount'] as num?)?.toDouble() ?? 0,
-          status: row['transaction_status'] as String? ?? 'pending',
+          amount: (row['amount'] as num?)?.toDouble() ?? 0,
+          status: row['status'] as String? ?? 'pending',
           paymentMethod: row['payment_method'] as String?,
           createdAt: DateTime.parse(row['created_at'].toString()),
         ),
@@ -142,5 +175,7 @@ void invalidateSuperAdminData(WidgetRef ref) {
   ref.invalidate(recentUsersProvider);
   ref.invalidate(recentAgenciesProvider);
   ref.invalidate(recentPaymentsProvider);
+  ref.invalidate(platformPaymentsProvider);
   ref.invalidate(recentBookingsProvider);
+  ref.invalidate(agencyWithdrawalsProvider);
 }
