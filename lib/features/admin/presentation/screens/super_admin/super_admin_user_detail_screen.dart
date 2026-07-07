@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/error_card.dart';
+import '../../../../../shared/domain/entities/app_user.dart';
 import '../../../domain/entities/platform_user.dart';
 import '../../providers/super_admin_providers.dart';
 
@@ -22,7 +23,7 @@ class SuperAdminUserDetailScreen extends ConsumerWidget {
         NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail User')),
+      appBar: AppBar(title: const Text('Detail Pengguna')),
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Padding(
@@ -35,12 +36,12 @@ class SuperAdminUserDetailScreen extends ConsumerWidget {
             _ProfileCard(user: user, dateFormat: dateFormat),
             const SizedBox(height: 20),
             _Section(
-              title: 'Riwayat Booking',
+              title: 'Riwayat Pesanan',
               child: bookingsAsync.when(
                 loading: () => const CircularProgressIndicator(),
-                error: (_, __) => const Text('Gagal memuat booking'),
+                error: (_, __) => const Text('Gagal memuat pesanan'),
                 data: (bookings) => bookings.isEmpty
-                    ? const Text('Belum ada booking')
+                    ? const Text('Belum ada pesanan')
                     : Column(
                         children: [
                           for (final booking in bookings)
@@ -48,7 +49,7 @@ class SuperAdminUserDetailScreen extends ConsumerWidget {
                               contentPadding: EdgeInsets.zero,
                               leading: const Icon(Icons.event_note_outlined),
                               title: Text(
-                                  _nestedName(booking['rooms']) ?? 'Booking'),
+                                  _nestedName(booking['rooms']) ?? 'Pesanan'),
                               subtitle: Text(
                                   '${booking['status']} • ${booking['booking_date']}'),
                               trailing: Text(currency.format(
@@ -65,9 +66,9 @@ class SuperAdminUserDetailScreen extends ConsumerWidget {
               title: 'Riwayat Pembayaran',
               child: paymentsAsync.when(
                 loading: () => const CircularProgressIndicator(),
-                error: (_, __) => const Text('Gagal memuat payment'),
+                error: (_, __) => const Text('Gagal memuat pembayaran'),
                 data: (payments) => payments.isEmpty
-                    ? const Text('Belum ada payment')
+                    ? const Text('Belum ada pembayaran')
                     : Column(
                         children: [
                           for (final payment in payments)
@@ -153,12 +154,19 @@ class _ProfileCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _Row('Role', user.role.name),
-          _Row('Agency', user.agencyName ?? '-'),
+          _Row(
+            'Peran',
+            switch (user.role) {
+              UserRole.superAdmin => 'Super Admin',
+              UserRole.admin => 'Admin Agensi',
+              UserRole.user => 'Pengguna',
+            },
+          ),
+          _Row('Agensi', user.agencyName ?? '-'),
           _Row('Status', user.statusLabel),
           _Row('Telepon', user.phone ?? '-'),
           _Row(
-            'Last Login',
+            'Login Terakhir',
             user.lastLoginAt == null
                 ? '-'
                 : dateFormat.format(user.lastLoginAt!),
