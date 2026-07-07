@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/error/failure.dart';
 import '../entities/agency.dart';
+import '../entities/agency_withdrawal.dart';
 import '../entities/audit_log_entry.dart';
 import '../entities/platform_analytics.dart';
 import '../entities/platform_payment.dart';
@@ -25,11 +26,13 @@ abstract interface class SuperAdminRepository {
       {int limit = 5});
   Future<Either<Failure, List<Map<String, dynamic>>>> getRecentBookings(
       {int limit = 5});
+  Future<Either<Failure, List<AgencyWithdrawal>>> getAgencyWithdrawals();
 
   Future<Either<Failure, Unit>> approveAgency(String agencyId);
   Future<Either<Failure, Unit>> rejectAgency(String agencyId);
   Future<Either<Failure, Unit>> suspendAgency(String agencyId);
   Future<Either<Failure, Unit>> reactivateAgency(String agencyId);
+  Future<Either<Failure, Unit>> deleteAgency(String agencyId);
   Future<Either<Failure, Unit>> setAgencyActive(String agencyId, bool isActive);
   Future<Either<Failure, Unit>> updateAgency(
       String agencyId, Map<String, dynamic> values);
@@ -47,5 +50,12 @@ abstract interface class SuperAdminRepository {
   });
   Future<Either<Failure, Unit>> updateRoom(
       String roomId, Map<String, dynamic> values);
+  Future<Either<Failure, Unit>> suspendRoom(String roomId);
+  Future<Either<Failure, Unit>> reactivateRoom(String roomId);
   Future<Either<Failure, Unit>> deleteRoom(String roomId);
+  Future<Either<Failure, Unit>> updateAgencyWithdrawalStatus({
+    required String withdrawalId,
+    required String status,
+    String? rejectionReason,
+  });
 }
