@@ -12,6 +12,7 @@ class Booking {
     this.facilityId,
     this.userName,
     this.roomName,
+    this.createdAt,
   });
 
   final String id;
@@ -26,4 +27,5 @@ class Booking {
   final double basePrice;
   final double finalPrice;
   final String status;
+  final DateTime? createdAt;
 }
