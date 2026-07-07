@@ -4,10 +4,12 @@ import '../../../../core/constants/supabase_tables.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/supabase/supabase_service.dart';
 import '../../domain/entities/agency.dart';
+import '../../domain/entities/agency_withdrawal.dart';
 import '../../domain/entities/platform_stats.dart';
 import '../../domain/entities/platform_user.dart';
 import '../../domain/repositories/agency_repository.dart';
 import '../dto/agency_dto.dart';
+import '../dto/agency_withdrawal_dto.dart';
 import '../dto/platform_user_dto.dart';
 
 class SupabaseAgencyRepository implements AgencyRepository {
@@ -129,6 +131,54 @@ class SupabaseAgencyRepository implements AgencyRepository {
     return _updateAgency(agencyId, {'is_active': isActive});
   }
 
+  @override
+  Future<Either<Failure, List<AgencyWithdrawal>>> getMyWithdrawals(
+    String adminId,
+  ) async {
+    try {
+      final agency = await _agencyForAdmin(adminId);
+      if (agency == null) return right(const <AgencyWithdrawal>[]);
+      final rows = await _service.requireClient
+          .from(SupabaseTables.agencyWithdrawals)
+          .select()
+          .eq('agency_id', agency['id'] as String)
+          .order('created_at', ascending: false);
+      return right(rows.map(AgencyWithdrawalDto.fromJson).toList());
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> createWithdrawal({
+    required String adminId,
+    required double amount,
+    required String bankName,
+    required String accountName,
+    required String accountNumber,
+  }) async {
+    try {
+      final agency = await _agencyForAdmin(adminId);
+      if (agency == null) {
+        return left(const UnknownFailure('Agency tidak ditemukan.'));
+      }
+
+      await _service.requireClient
+          .from(SupabaseTables.agencyWithdrawals)
+          .insert({
+        'agency_id': agency['id'],
+        'requested_by': adminId,
+        'amount': amount,
+        'bank_name': bankName,
+        'account_name': accountName,
+        'account_number': accountNumber,
+      });
+      return right(unit);
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
   Future<Either<Failure, Unit>> _updateAgency(
     String agencyId,
     Map<String, Object?> values,
@@ -142,5 +192,15 @@ class SupabaseAgencyRepository implements AgencyRepository {
     } catch (error) {
       return left(UnknownFailure(error.toString()));
     }
+  }
+
+  Future<Map<String, dynamic>?> _agencyForAdmin(String adminId) async {
+    final rows = await _service.requireClient
+        .from(SupabaseTables.agencies)
+        .select('id')
+        .eq('admin_id', adminId)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    return rows.first;
   }
 }
