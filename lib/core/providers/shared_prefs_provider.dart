@@ -22,3 +22,22 @@ class HasSeenOnboardingNotifier extends Notifier<bool> {
 final hasSeenOnboardingProvider = NotifierProvider<HasSeenOnboardingNotifier, bool>(() {
   return HasSeenOnboardingNotifier();
 });
+
+class HasSeenLanguageSelectionNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool('hasSeenLanguageSelection') ?? false;
+  }
+
+  Future<void> setHasSeen(bool value) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool('hasSeenLanguageSelection', value);
+    state = value;
+  }
+}
+
+final hasSeenLanguageSelectionProvider =
+    NotifierProvider<HasSeenLanguageSelectionNotifier, bool>(() {
+  return HasSeenLanguageSelectionNotifier();
+});
