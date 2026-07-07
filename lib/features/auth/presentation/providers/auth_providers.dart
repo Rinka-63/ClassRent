@@ -63,6 +63,23 @@ class AuthController extends StateNotifier<AuthState> {
     );
   }
 
+  Future<bool> refreshCurrentUser() async {
+    final result = await _repository.restoreSession();
+    return result.match(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: _messageFor(failure),
+        );
+        return false;
+      },
+      (user) {
+        state = AuthState(user: user);
+        return true;
+      },
+    );
+  }
+
   Future<bool> login({
     required String email,
     required String password,
@@ -142,6 +159,32 @@ class AuthController extends StateNotifier<AuthState> {
     );
   }
 
+  Future<bool> updateProfile({
+    required String fullName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    final result = await _repository.updateProfile(
+      fullName: fullName,
+      phone: phone,
+      avatarUrl: avatarUrl,
+    );
+    return result.match(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: _messageFor(failure),
+        );
+        return false;
+      },
+      (user) {
+        state = AuthState(user: user);
+        return true;
+      },
+    );
+  }
+
   Future<void> logout() async {
     state = state.copyWith(isLoading: true, clearError: true);
     final result = await _repository.logout();
@@ -154,7 +197,18 @@ class AuthController extends StateNotifier<AuthState> {
     );
   }
 
-  String _messageFor(Failure failure) => failure.message;
+  String _messageFor(Failure failure) {
+    if (failure is AuthFailure) {
+      final message = failure.message.toLowerCase();
+      if (message.contains('invalid login credentials') ||
+          message.contains('invalid credentials') ||
+          message.contains('email not confirmed') ||
+          failure.code == '400') {
+        return 'Email atau kata sandi salah.';
+      }
+    }
+    return failure.message;
+  }
 }
 
 final currentUserProvider = Provider<AppUser?>((ref) {
