@@ -7,8 +7,6 @@ import '../../../rooms/domain/entities/room.dart';
 import '../../../rooms/data/dto/room_dto.dart';
 import '../../domain/entities/audit_log_entry.dart';
 
-
-
 final adminRoomsProvider = FutureProvider<List<Room>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
   final user = ref.watch(currentUserProvider);
@@ -74,15 +72,27 @@ final adminHistoryProvider = FutureProvider<List<AuditLogEntry>>((ref) async {
 
   return resultList.map((dynamic item) {
     final row = item as Map<String, dynamic>;
-    
+
     final actorName = row['actor_name'] as String?;
     final newData = row['new'] as Map<String, dynamic>?;
     final oldData = row['old'] as Map<String, dynamic>?;
     final data = newData ?? oldData;
-    
+
     String? entityLabel = row['entity_id'] as String?;
     if (data != null) {
-      entityLabel = (data['name'] ?? data['full_name'] ?? data['title'] ?? row['entity_id'])?.toString();
+      entityLabel = (data['name'] ??
+              data['full_name'] ??
+              data['title'] ??
+              row['entity_id'])
+          ?.toString();
+    }
+    if (_looksLikeUuid(entityLabel)) {
+      final entityType = (row['entity_type'] as String? ?? 'entity').trim();
+      final entityId = row['entity_id']?.toString();
+      final shortId = entityId == null || entityId.isEmpty
+          ? ''
+          : entityId.substring(0, entityId.length > 8 ? 8 : entityId.length);
+      entityLabel = shortId.isEmpty ? entityType : '$entityType #$shortId';
     }
 
     return AuditLogEntry(
@@ -118,4 +128,11 @@ class AdminRoomReports {
   final double averageRating;
   final double hourlyFloor;
   final double hourlyCeiling;
+}
+
+bool _looksLikeUuid(String? value) {
+  if (value == null || value.isEmpty) return true;
+  return RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  ).hasMatch(value);
 }
