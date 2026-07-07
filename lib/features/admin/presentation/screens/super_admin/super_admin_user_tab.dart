@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/empty_state.dart';
 import '../../../../../core/widgets/error_card.dart';
@@ -29,7 +30,7 @@ class _SuperAdminUserTabState extends ConsumerState<SuperAdminUserTab> {
   @override
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(platformUsersProvider);
-    final dateFormat = DateFormat('dd MMM yyyy');
+    final strings = AppStrings.of(context);
 
     return usersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -51,20 +52,40 @@ class _SuperAdminUserTabState extends ConsumerState<SuperAdminUserTab> {
             padding: const EdgeInsets.all(16),
             children: [
               SuperAdminListControls(
-                searchHint: 'Cari user...',
+                searchHint: strings.searchUsersHint,
                 onSearchChanged: (value) => setState(() {
                   _search = value.toLowerCase();
                   _page = 0;
                 }),
-                filterOptions: const [
-                  'User',
-                  'Agency Admin',
-                  'Super Admin',
-                  'Active',
-                  'Pending',
-                  'Suspended',
-                  'Disabled',
-                  'Deleted',
+                filterOptions: [
+                  SuperAdminFilterOption(
+                    value: 'user',
+                    label: strings.userLabel,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'admin',
+                    label: strings.adminAgencyLabel,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'super_admin',
+                    label: strings.superAdminLabel,
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'active',
+                    label: strings.tr('Aktif', 'Active'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'pending',
+                    label: strings.tr('Menunggu', 'Pending'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'suspended',
+                    label: strings.tr('Disuspen', 'Suspended'),
+                  ),
+                  SuperAdminFilterOption(
+                    value: 'disabled',
+                    label: strings.tr('Diblokir', 'Banned'),
+                  ),
                 ],
                 selectedFilter: _filter,
                 onFilterChanged: (value) => setState(() {
@@ -76,20 +97,22 @@ class _SuperAdminUserTabState extends ConsumerState<SuperAdminUserTab> {
               ),
               const SizedBox(height: 16),
               if (filtered.isEmpty)
-                const EmptyState(title: 'User tidak ditemukan')
+                EmptyState(
+                  title: strings.tr(
+                    'Pengguna tidak ditemukan',
+                    'No users found',
+                  ),
+                )
               else ...[
                 for (final user in paged) ...[
                   _UserListTile(
                     user: user,
-                    dateFormat: dateFormat,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) =>
                             SuperAdminUserDetailScreen(userId: user.id),
                       ),
                     ),
-                    onEdit: () => _editUser(context, user),
-                    onDelete: () => _deleteUser(context, user),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -118,14 +141,13 @@ class _SuperAdminUserTabState extends ConsumerState<SuperAdminUserTab> {
     if (_filter != null) {
       result = result.where((user) {
         return switch (_filter) {
-          'User' => user.role == UserRole.user,
-          'Agency Admin' => user.role == UserRole.admin,
-          'Super Admin' => user.role == UserRole.superAdmin,
-          'Active' => user.accountStatus == 'active',
-          'Pending' => user.accountStatus == 'pending',
-          'Suspended' => user.accountStatus == 'suspended',
-          'Disabled' => user.accountStatus == 'disabled',
-          'Deleted' => user.accountStatus == 'deleted',
+          'user' => user.role == UserRole.user,
+          'admin' => user.role == UserRole.admin,
+          'super_admin' => user.role == UserRole.superAdmin,
+          'active' => user.accountStatus == 'active',
+          'pending' => user.accountStatus == 'pending',
+          'suspended' => user.accountStatus == 'suspended',
+          'disabled' => user.accountStatus == 'disabled',
           _ => true,
         };
       }).toList();
@@ -146,96 +168,32 @@ class _SuperAdminUserTabState extends ConsumerState<SuperAdminUserTab> {
 
     return result;
   }
-
-  Future<void> _editUser(BuildContext context, PlatformUser user) async {
-    final nameController = TextEditingController(text: user.fullName);
-    final phoneController = TextEditingController(text: user.phone ?? '');
-
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit User'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Nama')),
-            TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(labelText: 'Telepon')),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Simpan')),
-        ],
-      ),
-    );
-
-    if (saved == true) {
-      await ref.read(superAdminRepositoryProvider).updateUser(user.id, {
-        'full_name': nameController.text.trim(),
-        'phone': phoneController.text.trim(),
-      });
-      invalidateSuperAdminData(ref);
-    }
-  }
-
-  Future<void> _deleteUser(BuildContext context, PlatformUser user) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Hapus User?'),
-        content: Text('User "${user.fullName}" akan di-soft delete.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Hapus')),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await ref.read(superAdminRepositoryProvider).deleteUser(user.id);
-      invalidateSuperAdminData(ref);
-    }
-  }
 }
 
 class _UserListTile extends ConsumerWidget {
   const _UserListTile({
     required this.user,
-    required this.dateFormat,
     required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
   });
 
   final PlatformUser user;
-  final DateFormat dateFormat;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isSelf = ref.watch(currentUserProvider)?.id == user.id;
+    final strings = AppStrings.of(context);
     final lastLogin = user.lastLoginAt == null
         ? '-'
         : DateFormat('dd MMM yyyy, HH:mm').format(user.lastLoginAt!);
     final roleLabel = switch (user.role) {
-      UserRole.superAdmin => 'Super Admin',
-      UserRole.admin => 'Agency Admin',
-      UserRole.user => 'User',
+      UserRole.superAdmin => strings.superAdminLabel,
+      UserRole.admin => strings.adminAgencyLabel,
+      UserRole.user => strings.userLabel,
     };
+    final agencyLabel =
+        user.agencyName ?? strings.tr('Tanpa agensi', 'No agency');
+    final metadata = '$roleLabel - $agencyLabel - ${user.statusLabel}';
 
     return InkWell(
       onTap: onTap,
@@ -266,12 +224,16 @@ class _UserListTile extends ConsumerWidget {
                           color: AppColors.onSurfaceVariant, fontSize: 13)),
                   const SizedBox(height: 4),
                   Text(
-                    '$roleLabel • ${user.agencyName ?? 'Tanpa agency'} • ${user.statusLabel}',
+                    metadata,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),
                   Text(
-                    'Last Login: $lastLogin | Created: ${dateFormat.format(user.createdAt ?? DateTime.now())}',
+                    '${strings.tr('Login', 'Login')}: $lastLogin',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),
@@ -279,10 +241,6 @@ class _UserListTile extends ConsumerWidget {
               ),
             ),
             _UserActionMenu(user: user, isSelf: isSelf),
-            IconButton(
-                onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
-            IconButton(
-                onPressed: onDelete, icon: const Icon(Icons.delete_outline)),
           ],
         ),
       ),
@@ -298,131 +256,76 @@ class _UserActionMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     return PopupMenuButton<String>(
-      tooltip: 'Aksi user',
+      tooltip: strings.tr('Aksi pengguna', 'User actions'),
       icon: const Icon(Icons.more_vert),
       onSelected: (value) async {
         final repository = ref.read(superAdminRepositoryProvider);
-        if (value == 'activate') {
-          await repository.activateUser(user.id);
-        } else if (value == 'suspend') {
-          await repository.suspendUser(user.id);
-        } else if (value == 'disable') {
-          await repository.disableUser(user.id);
-        } else if (value == 'reset') {
-          await repository.resetUserPassword(user.email);
-        } else if (value == 'role') {
-          await _changeRole(context, ref);
-        } else if (value == 'transfer') {
-          await _transferOwnership(context, ref);
-        } else if (value == 'delete') {
-          await repository.deleteUser(user.id);
-        }
-        invalidateSuperAdminData(ref);
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'activate',
-          enabled: !isSelf,
-          child: const Text('Activate'),
-        ),
-        PopupMenuItem(
-          value: 'suspend',
-          enabled: !isSelf,
-          child: const Text('Suspend'),
-        ),
-        PopupMenuItem(
-          value: 'disable',
-          enabled: !isSelf,
-          child: const Text('Disable'),
-        ),
-        const PopupMenuItem(value: 'reset', child: Text('Reset Password')),
-        PopupMenuItem(
-          value: 'role',
-          enabled: !isSelf,
-          child: const Text('Change Role'),
-        ),
-        if (user.agencyId != null)
-          PopupMenuItem(
-            value: 'transfer',
-            enabled: !isSelf,
-            child: const Text('Transfer Agency Ownership'),
-          ),
-        PopupMenuItem(
-          value: 'delete',
-          enabled: !isSelf,
-          child: const Text('Delete Account'),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _changeRole(BuildContext context, WidgetRef ref) async {
-    var selected = user.role.dbValue.toLowerCase();
-    final role = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Change Role'),
-        content: StatefulBuilder(
-          builder: (context, setState) => DropdownButtonFormField<String>(
-            initialValue: selected,
-            items: const [
-              DropdownMenuItem(value: 'user', child: Text('User')),
-              DropdownMenuItem(value: 'admin', child: Text('Agency Admin')),
-              DropdownMenuItem(
-                  value: 'super_admin', child: Text('Super Admin')),
-            ],
-            onChanged: (value) => setState(() => selected = value ?? selected),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, selected),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-    if (role != null) {
-      await ref
-          .read(superAdminRepositoryProvider)
-          .changeUserRole(user.id, role);
-    }
-  }
-
-  Future<void> _transferOwnership(BuildContext context, WidgetRef ref) async {
-    final emailController = TextEditingController();
-    final email = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Transfer Agency Ownership'),
-        content: TextField(
-          controller: emailController,
-          decoration: const InputDecoration(labelText: 'Email pemilik baru'),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, emailController.text.trim()),
-            child: const Text('Transfer'),
-          ),
-        ],
-      ),
-    );
-    if (email != null && email.isNotEmpty && user.agencyId != null) {
-      await ref.read(superAdminRepositoryProvider).transferAgencyOwnership(
-            agencyId: user.agencyId!,
-            newOwnerEmail: email,
+        String successMessage =
+            strings.tr('Aksi pengguna berhasil.', 'User action completed.');
+        Object? result;
+        if (value == 'suspend') {
+          result = await repository.suspendUser(user.id);
+          successMessage = strings.tr(
+            'Pengguna berhasil disuspen.',
+            'User suspended successfully.',
           );
-    }
+        } else if (value == 'ban') {
+          result = await repository.disableUser(user.id);
+          successMessage = strings.tr(
+            'Pengguna berhasil diblokir.',
+            'User banned successfully.',
+          );
+        } else if (value == 'activate') {
+          result = await repository.activateUser(user.id);
+          successMessage = strings.tr(
+            'Pengguna berhasil diaktifkan kembali.',
+            'User reactivated successfully.',
+          );
+        }
+        if (!context.mounted || result == null) return;
+        final either = result as dynamic;
+        either.match(
+          (failure) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(failure.message)),
+          ),
+          (_) {
+            invalidateSuperAdminData(ref);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(successMessage)),
+            );
+          },
+        );
+      },
+      itemBuilder: (context) {
+        final status = user.accountStatus.toLowerCase();
+        final canReactivate =
+            status == 'suspended' || status == 'disabled' || status == 'banned';
+
+        return [
+          if (canReactivate)
+            PopupMenuItem(
+              value: 'activate',
+              enabled: !isSelf,
+              child: Text(
+                strings.tr('Aktifkan kembali', 'Reactivate'),
+              ),
+            )
+          else ...[
+            PopupMenuItem(
+              value: 'suspend',
+              enabled: !isSelf,
+              child: Text(strings.tr('Disuspen', 'Suspend')),
+            ),
+            PopupMenuItem(
+              value: 'ban',
+              enabled: !isSelf,
+              child: Text(strings.tr('Blokir', 'Ban')),
+            ),
+          ],
+        ];
+      },
+    );
   }
 }
