@@ -23,7 +23,7 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Agency')),
+      appBar: AppBar(title: const Text('Detail Agensi')),
       body: agencyAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Padding(
@@ -42,9 +42,9 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
                 _InfoRow('Telepon Pemilik', agency.ownerPhone ?? 'Belum diisi'),
                 _InfoRow('Email', agency.email ?? 'Belum diisi'),
                 _InfoRow('Telepon', agency.phone ?? 'Belum diisi'),
-                _InfoRow('Alamat', agency.address ?? agency.city ?? 'Belum diisi'),
+                _InfoRow(
+                    'Alamat', agency.address ?? agency.city ?? 'Belum diisi'),
                 _InfoRow('Deskripsi', agency.description ?? 'Belum diisi'),
-                _InfoRow('Logo URL', agency.logoUrl ?? 'Belum diisi'),
                 _InfoRow('Slug', agency.slug),
                 _InfoRow(
                   'Registrasi',
@@ -55,26 +55,23 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
-            _AgencyDetailActions(
-                agencyId: agency.id,
-                status: agency.approvalStatus,
-                isActive: agency.isActive),
+            _AgencyDetailActions(agencyId: agency.id),
             const SizedBox(height: 16),
             SuperAdminStatsGrid(
               children: [
                 SuperAdminStatCard(
-                  label: 'Total Room',
+                  label: 'Total Ruangan',
                   value: '${agency.roomCount}',
                   icon: Icons.meeting_room_outlined,
                 ),
                 SuperAdminStatCard(
-                  label: 'Total Booking',
+                  label: 'Total Pesanan',
                   value: '${agency.bookingCount}',
                   icon: Icons.event_available_outlined,
                   accent: AppColors.secondary,
                 ),
                 SuperAdminStatCard(
-                  label: 'Revenue',
+                  label: 'Pendapatan',
                   value: currency.format(agency.revenue),
                   icon: Icons.payments_outlined,
                   accent: AppColors.tertiary,
@@ -83,7 +80,7 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Daftar Room',
+              'Daftar Ruangan',
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -92,9 +89,9 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             roomsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Gagal memuat room'),
+              error: (_, __) => const Text('Gagal memuat ruangan'),
               data: (rooms) => rooms.isEmpty
-                  ? const EmptyState(title: 'Belum ada room')
+                  ? const EmptyState(title: 'Belum ada ruangan')
                   : Column(
                       children: [
                         for (final item in rooms)
@@ -105,7 +102,7 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
                             subtitle: Text(
                                 '${item.room.capacity} orang • ${currency.format(item.room.hourlyRate)}/jam'),
                             trailing: SuperAdminStatusChip(
-                              label: item.room.isActive ? 'Active' : 'Inactive',
+                              label: item.room.isActive ? 'Aktif' : 'Nonaktif',
                               color: item.room.isActive
                                   ? AppColors.secondary
                                   : AppColors.onSurfaceVariant,
@@ -122,15 +119,9 @@ class SuperAdminAgencyDetailScreen extends ConsumerWidget {
 }
 
 class _AgencyDetailActions extends ConsumerWidget {
-  const _AgencyDetailActions({
-    required this.agencyId,
-    required this.status,
-    required this.isActive,
-  });
+  const _AgencyDetailActions({required this.agencyId});
 
   final String agencyId;
-  final String status;
-  final bool isActive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,46 +135,22 @@ class _AgencyDetailActions extends ConsumerWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        if (status != 'approved' || !isActive)
-          FilledButton.icon(
-            onPressed: () => run(() async {
-              await ref
-                  .read(superAdminRepositoryProvider)
-                  .approveAgency(agencyId);
-            }),
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Approve'),
-          ),
-        if (status == 'pending')
-          OutlinedButton.icon(
-            onPressed: () => run(() async {
-              await ref
-                  .read(superAdminRepositoryProvider)
-                  .rejectAgency(agencyId);
-            }),
-            icon: const Icon(Icons.cancel_outlined),
-            label: const Text('Reject'),
-          ),
-        if (status == 'approved' && isActive)
-          OutlinedButton.icon(
-            onPressed: () => run(() async {
-              await ref
-                  .read(superAdminRepositoryProvider)
-                  .suspendAgency(agencyId);
-            }),
-            icon: const Icon(Icons.block_outlined),
-            label: const Text('Suspend'),
-          ),
-        if (status == 'suspended' || !isActive)
-          FilledButton.icon(
-            onPressed: () => run(() async {
-              await ref
-                  .read(superAdminRepositoryProvider)
-                  .reactivateAgency(agencyId);
-            }),
-            icon: const Icon(Icons.restart_alt_outlined),
-            label: const Text('Reactivate'),
-          ),
+        OutlinedButton.icon(
+          onPressed: () => run(() async {
+            await ref
+                .read(superAdminRepositoryProvider)
+                .suspendAgency(agencyId);
+          }),
+          icon: const Icon(Icons.block_outlined),
+          label: const Text('Disuspen'),
+        ),
+        FilledButton.icon(
+          onPressed: () => run(() async {
+            await ref.read(superAdminRepositoryProvider).rejectAgency(agencyId);
+          }),
+          icon: const Icon(Icons.no_accounts_outlined),
+          label: const Text('Blokir'),
+        ),
       ],
     );
   }
