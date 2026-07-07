@@ -28,11 +28,11 @@ class PlatformUser {
   final DateTime? createdAt;
 
   String get statusLabel => switch (accountStatus) {
-        'active' => 'Active',
-        'pending' => 'Pending',
-        'suspended' => 'Suspended',
-        'disabled' => 'Disabled',
-        'deleted' => 'Deleted',
-        _ => isVerified ? 'Active' : 'Pending',
+        'active' => 'Aktif',
+        'pending' => 'Menunggu',
+        'suspended' => 'Disuspen',
+        'disabled' => 'Dinonaktifkan',
+        'deleted' => 'Diblokir',
+        _ => isVerified ? 'Aktif' : 'Menunggu',
       };
 }
