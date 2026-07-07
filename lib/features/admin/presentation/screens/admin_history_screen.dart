@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/app_scaffold.dart';
 import '../../../../../core/widgets/empty_state.dart';
@@ -31,9 +32,10 @@ class _AdminHistoryScreenState extends ConsumerState<AdminHistoryScreen> {
   Widget build(BuildContext context) {
     final historyValue = ref.watch(adminHistoryProvider);
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID');
+    final strings = AppStrings.of(context);
 
     return AppScaffold(
-      title: 'History',
+      title: strings.history,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.profile),
@@ -60,17 +62,32 @@ class _AdminHistoryScreenState extends ConsumerState<AdminHistoryScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 SuperAdminListControls(
-                  searchHint: 'Cari aktivitas, target...',
+                  searchHint: strings.searchActivitiesHint,
                   onSearchChanged: (value) => setState(() {
                     _search = value.toLowerCase();
                     _page = 0;
                   }),
-                  filterOptions: const [
-                    'Agency',
-                    'Room',
-                    'User',
-                    'Booking',
-                    'Payment',
+                  filterOptions: [
+                    SuperAdminFilterOption(
+                      value: 'agency',
+                      label: strings.agency,
+                    ),
+                    SuperAdminFilterOption(
+                      value: 'room',
+                      label: strings.rooms,
+                    ),
+                    SuperAdminFilterOption(
+                      value: 'user',
+                      label: strings.users,
+                    ),
+                    SuperAdminFilterOption(
+                      value: 'booking',
+                      label: strings.bookings,
+                    ),
+                    SuperAdminFilterOption(
+                      value: 'payment',
+                      label: strings.payments,
+                    ),
                   ],
                   selectedFilter: _filter,
                   onFilterChanged: (value) => setState(() {
@@ -82,9 +99,15 @@ class _AdminHistoryScreenState extends ConsumerState<AdminHistoryScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (filtered.isEmpty)
-                  const EmptyState(
-                    title: 'Riwayat belum tersedia',
-                    message: 'Belum ada audit log untuk akun ini.',
+                  EmptyState(
+                    title: strings.tr(
+                      'Riwayat belum tersedia',
+                      'No history yet',
+                    ),
+                    message: strings.tr(
+                      'Belum ada audit log untuk akun ini.',
+                      'There are no audit logs for this account yet.',
+                    ),
                   )
                 else ...[
                   for (final log in paged) ...[
@@ -103,7 +126,8 @@ class _AdminHistoryScreenState extends ConsumerState<AdminHistoryScreen> {
           );
         },
       ),
-      bottomNavigationBar: const AdminNavBar(currentPath: AppRoutes.adminHistory),
+      bottomNavigationBar:
+          const AdminNavBar(currentPath: AppRoutes.adminHistory),
     );
   }
 
@@ -121,11 +145,11 @@ class _AdminHistoryScreenState extends ConsumerState<AdminHistoryScreen> {
         final action = log.action.toLowerCase();
         final entity = log.entityType.toLowerCase();
         return switch (_filter) {
-          'Agency' => entity.contains('agency') || action.contains('agency'),
-          'Room' => entity.contains('room') || action.contains('room'),
-          'User' => entity.contains('user') || action.contains('user'),
-          'Booking' => entity.contains('booking') || action.contains('booking'),
-          'Payment' => entity.contains('payment') || action.contains('payment'),
+          'agency' => entity.contains('agency') || action.contains('agency'),
+          'room' => entity.contains('room') || action.contains('room'),
+          'user' => entity.contains('user') || action.contains('user'),
+          'booking' => entity.contains('booking') || action.contains('booking'),
+          'payment' => entity.contains('payment') || action.contains('payment'),
           _ => true,
         };
       }).toList();
@@ -160,7 +184,8 @@ class _AuditLogTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +235,8 @@ class _AuditLogTile extends StatelessWidget {
                     childrenPadding: EdgeInsets.zero,
                     title: const Text(
                       'Detail Perubahan',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     children: [
                       for (final change in changes)
