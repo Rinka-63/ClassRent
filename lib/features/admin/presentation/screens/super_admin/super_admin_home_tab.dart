@@ -70,27 +70,61 @@ class _HeroBanner extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryContainer],
+          colors: [
+            AppColors.primaryDeep,
+            AppColors.primary,
+            AppColors.secondary,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.24),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Platform Control Center',
+            'Pusat Kontrol Platform',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                 ),
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Text(
-            'Developer & System Administrator — pantau ${stats.totalAgencies} agency, '
-            '${stats.totalUsers} user, dan ${stats.totalBookings} booking.',
-            style: const TextStyle(color: Colors.white70, height: 1.4),
+            'Pengembang & administrator sistem - pantau ${stats.totalAgencies} agensi, '
+            '${stats.totalUsers} pengguna, dan ${stats.totalBookings} pesanan.',
+            style: const TextStyle(
+              color: Colors.white,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HeroPill(
+                icon: Icons.apartment_outlined,
+                label: '${stats.activeAgencies} agensi aktif',
+              ),
+              _HeroPill(
+                icon: Icons.payments_outlined,
+                label:
+                    'Rp ${NumberFormat.compact(locale: 'id_ID').format(stats.totalRevenue)}',
+              ),
+            ],
           ),
         ],
       ),
@@ -98,87 +132,137 @@ class _HeroBanner extends StatelessWidget {
   }
 }
 
-class _StatsSection extends StatelessWidget {
+class _HeroPill extends StatelessWidget {
+  const _HeroPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsSection extends ConsumerWidget {
   const _StatsSection({required this.stats});
 
   final PlatformStats stats;
 
+  void _goToTab(WidgetRef ref, int index) {
+    ref.read(superAdminTabIndexProvider.notifier).state = index;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currency =
         NumberFormat.compactCurrency(locale: 'id_ID', symbol: 'Rp');
 
     return SuperAdminStatsGrid(
       children: [
         SuperAdminStatCard(
-          label: 'Total Agency',
+          label: 'Total Agensi',
           value: '${stats.totalAgencies}',
           icon: Icons.apartment_outlined,
+          onTap: () => _goToTab(ref, 1),
         ),
         SuperAdminStatCard(
-          label: 'Pending Approval',
+          label: 'Menunggu Persetujuan',
           value: '${stats.pendingAgencies}',
           icon: Icons.pending_actions_outlined,
           accent: AppColors.tertiary,
+          onTap: () => _goToTab(ref, 1),
         ),
         SuperAdminStatCard(
-          label: 'Approved Agency',
+          label: 'Agensi Disetujui',
           value: '${stats.approvedAgencies}',
           icon: Icons.verified_outlined,
           accent: AppColors.secondary,
+          onTap: () => _goToTab(ref, 1),
         ),
         SuperAdminStatCard(
-          label: 'Suspended Agency',
+          label: 'Agensi Disuspen',
           value: '${stats.suspendedAgencies}',
           icon: Icons.block_outlined,
           accent: AppColors.error,
+          onTap: () => _goToTab(ref, 1),
         ),
         SuperAdminStatCard(
-          label: 'Total User',
+          label: 'Total Pengguna',
           value: '${stats.totalUsers}',
           icon: Icons.people_outline,
           accent: AppColors.secondary,
+          onTap: () => _goToTab(ref, 2),
         ),
         SuperAdminStatCard(
-          label: 'Active User',
+          label: 'Pengguna Aktif',
           value: '${stats.activeUsers}',
           icon: Icons.person_outline,
           accent: AppColors.secondary,
+          onTap: () => _goToTab(ref, 2),
         ),
         SuperAdminStatCard(
-          label: 'Pending User',
+          label: 'Pengguna Menunggu',
           value: '${stats.pendingUsers}',
           icon: Icons.person_add_alt_1_outlined,
           accent: AppColors.tertiary,
+          onTap: () => _goToTab(ref, 2),
         ),
         SuperAdminStatCard(
-          label: 'Suspended User',
+          label: 'Pengguna Disuspen',
           value: '${stats.suspendedUsers}',
           icon: Icons.person_off_outlined,
           accent: AppColors.error,
+          onTap: () => _goToTab(ref, 2),
         ),
         SuperAdminStatCard(
-          label: 'Total Payment',
+          label: 'Total Pembayaran',
           value: '${stats.totalPayments}',
           icon: Icons.payments_outlined,
+          onTap: () => _goToTab(ref, 3),
         ),
         SuperAdminStatCard(
-          label: 'Pending Payment',
+          label: 'Pembayaran Menunggu',
           value: '${stats.pendingPayments}',
           icon: Icons.hourglass_top_outlined,
           accent: AppColors.tertiary,
+          onTap: () => _goToTab(ref, 3),
         ),
         SuperAdminStatCard(
-          label: 'Completed Payment',
+          label: 'Pembayaran Selesai',
           value: '${stats.completedPayments}',
           icon: Icons.check_circle_outline,
           accent: AppColors.secondary,
+          onTap: () => _goToTab(ref, 3),
         ),
         SuperAdminStatCard(
-          label: 'Total Revenue',
+          label: 'Total Pendapatan',
           value: currency.format(stats.totalRevenue),
           icon: Icons.trending_up,
           accent: AppColors.secondary,
+          onTap: () => _goToTab(ref, 3),
         ),
       ],
     );
@@ -194,25 +278,25 @@ class _AlertCardsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final alerts = [
       _AlertItem(
-        title: 'Agency Menunggu Approval',
+        title: 'Agensi Menunggu Persetujuan',
         value: stats.pendingAgencies,
         icon: Icons.apartment_outlined,
         color: AppColors.tertiary,
       ),
       _AlertItem(
-        title: 'User Bermasalah',
+        title: 'Pengguna Bermasalah',
         value: stats.suspendedUsers,
         icon: Icons.person_off_outlined,
         color: AppColors.error,
       ),
       _AlertItem(
-        title: 'Booking Bermasalah',
+        title: 'Pesanan Bermasalah',
         value: 0,
         icon: Icons.event_busy_outlined,
         color: AppColors.error,
       ),
       _AlertItem(
-        title: 'Payment Pending',
+        title: 'Pembayaran Menunggu',
         value: stats.pendingPayments,
         icon: Icons.hourglass_top_outlined,
         color: AppColors.primary,
@@ -224,57 +308,62 @@ class _AlertCardsSection extends StatelessWidget {
       children: [
         const SuperAdminSectionHeader(title: 'Alert Cards'),
         const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: MediaQuery.sizeOf(context).width > 720 ? 4 : 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.9,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          children: [
-            for (final alert in alerts)
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: alert.color.withValues(alpha: 0.35)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(alert.icon, color: alert.color),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final alert in alerts)
+                  SizedBox(
+                    width: constraints.maxWidth > 720
+                        ? (constraints.maxWidth - (12 * 3)) / 4
+                        : (constraints.maxWidth - 12) / 2,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: alert.color.withValues(alpha: 0.35)),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            '${alert.value}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
+                          Icon(alert.icon, color: alert.color),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${alert.value}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                 ),
-                          ),
-                          Text(
-                            alert.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
+                                Text(
+                                  alert.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-          ],
+                  ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -314,12 +403,12 @@ class _RecentActivitySection extends ConsumerWidget {
         const SuperAdminSectionHeader(title: 'Aktivitas Terbaru'),
         const SizedBox(height: 12),
         _ActivityCard(
-          title: 'User Terbaru',
+          title: 'Pengguna Terbaru',
           child: usersAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text('Gagal memuat user'),
+            error: (_, __) => const Text('Gagal memuat pengguna'),
             data: (users) => users.isEmpty
-                ? const Text('Belum ada user')
+                ? const Text('Belum ada pengguna')
                 : Column(
                     children: [
                       for (final user in users)
@@ -336,18 +425,18 @@ class _RecentActivitySection extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         _ActivityCard(
-          title: 'Booking Terbaru',
+          title: 'Pesanan Terbaru',
           child: bookingsAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text('Gagal memuat booking'),
+            error: (_, __) => const Text('Gagal memuat pesanan'),
             data: (bookings) => bookings.isEmpty
-                ? const Text('Belum ada booking')
+                ? const Text('Belum ada pesanan')
                 : Column(
                     children: [
                       for (final booking in bookings)
                         _ActivityRow(
                           icon: Icons.event_note_outlined,
-                          title: _nestedName(booking['rooms']) ?? 'Booking',
+                          title: _nestedName(booking['rooms']) ?? 'Pesanan',
                           subtitle: booking['status'] as String? ?? '-',
                           trailing: currency.format(
                             (booking['final_price'] as num?)?.toDouble() ?? 0,
@@ -359,12 +448,12 @@ class _RecentActivitySection extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         _ActivityCard(
-          title: 'Agency Terbaru',
+          title: 'Agensi Terbaru',
           child: agenciesAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text('Gagal memuat agency'),
+            error: (_, __) => const Text('Gagal memuat agensi'),
             data: (agencies) => agencies.isEmpty
-                ? const Text('Belum ada agency')
+                ? const Text('Belum ada agensi')
                 : Column(
                     children: [
                       for (final agency in agencies)
@@ -381,12 +470,12 @@ class _RecentActivitySection extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         _ActivityCard(
-          title: 'Payment Terbaru',
+          title: 'Pembayaran Terbaru',
           child: paymentsAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text('Gagal memuat payment'),
+            error: (_, __) => const Text('Gagal memuat pembayaran'),
             data: (payments) => payments.isEmpty
-                ? const Text('Belum ada payment')
+                ? const Text('Belum ada pembayaran')
                 : Column(
                     children: [
                       for (final payment in payments)
@@ -496,7 +585,7 @@ class _QuickActionsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SuperAdminSectionHeader(title: 'Quick Actions'),
+        const SuperAdminSectionHeader(title: 'Aksi Cepat'),
         const SizedBox(height: 12),
         Wrap(
           spacing: 12,
@@ -506,7 +595,7 @@ class _QuickActionsSection extends ConsumerWidget {
               onPressed: () =>
                   ref.read(superAdminTabIndexProvider.notifier).state = 4,
               icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('Lihat Audit Log'),
+              label: const Text('Lihat Log Audit'),
             ),
           ],
         ),
