@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_scaffold.dart';
+import '../../../booking/domain/entities/booking.dart';
 import '../../../booking/presentation/providers/booking_admin_providers.dart';
 
 class AdminScannerScreen extends ConsumerStatefulWidget {
@@ -65,6 +66,11 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
         return;
       }
 
+      if (booking.status == 'expired' || _isBookingPast(booking)) {
+        _showError('QR Code sudah kadaluarsa.');
+        return;
+      }
+
       if (booking.status == 'checked_out') {
         _showError('Pengunjung ini sudah melakukan check-out sebelumnya.');
         return;
@@ -84,18 +90,21 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
         return;
       }
 
-      await ref.read(bookingRepositoryProvider).updateBooking(booking.id, {'status': newStatus});
+      await ref
+          .read(bookingRepositoryProvider)
+          .updateBooking(booking.id, {'status': newStatus});
       ref.invalidate(agencyBookingsProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(successMessage),
-          backgroundColor: AppColors.secondary,
-          duration: const Duration(seconds: 4),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(successMessage),
+            backgroundColor: AppColors.secondary,
+            duration: const Duration(seconds: 4),
+          ),
+        );
         context.pop(); // Kembali ke halaman sebelumnya
       }
-
     } catch (e) {
       _showError('Terjadi kesalahan: $e');
     } finally {
@@ -109,10 +118,12 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: AppColors.error,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+      ),
+    );
     // Beri jeda sebelum scan lagi
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -121,6 +132,19 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
         });
       }
     });
+  }
+
+  bool _isBookingPast(Booking booking) {
+    final parts = booking.endTime.toString().split(':');
+    if (parts.length < 2) return false;
+    final endAt = DateTime(
+      booking.bookingDate.year,
+      booking.bookingDate.month,
+      booking.bookingDate.day,
+      int.tryParse(parts[0]) ?? 23,
+      int.tryParse(parts[1]) ?? 59,
+    );
+    return DateTime.now().isAfter(endAt);
   }
 
   @override
@@ -133,10 +157,10 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
             controller: _controller,
             onDetect: _handleBarcode,
           ),
-          
+
           // Scanner Overlay
           Container(
-            decoration: ShapeDecoration(
+            decoration: const ShapeDecoration(
               shape: QrScannerOverlayShape(
                 borderColor: AppColors.primary,
                 borderRadius: 12,
@@ -146,7 +170,7 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
               ),
             ),
           ),
-          
+
           // Instruction
           const Positioned(
             bottom: 48,
@@ -179,7 +203,7 @@ class _AdminScannerScreenState extends ConsumerState<AdminScannerScreen> {
 }
 
 class QrScannerOverlayShape extends ShapeBorder {
-  QrScannerOverlayShape({
+  const QrScannerOverlayShape({
     this.borderColor = Colors.white,
     this.borderWidth = 3.0,
     this.overlayColor = const Color.fromRGBO(0, 0, 0, 0.6),
@@ -207,14 +231,14 @@ class QrScannerOverlayShape extends ShapeBorder {
 
   @override
   Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    Path _getLeftTopPath(Rect rect) {
+    Path getLeftTopPath(Rect rect) {
       return Path()
         ..moveTo(rect.left, rect.bottom)
         ..lineTo(rect.left, rect.top)
         ..lineTo(rect.right, rect.top);
     }
 
-    return _getLeftTopPath(rect)
+    return getLeftTopPath(rect)
       ..lineTo(rect.right, rect.bottom)
       ..lineTo(rect.left, rect.bottom)
       ..lineTo(rect.left, rect.top);
@@ -223,11 +247,10 @@ class QrScannerOverlayShape extends ShapeBorder {
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
     final width = rect.width;
-    final borderWidthSize = width / 2;
     final height = rect.height;
     final borderOffset = borderWidth / 2;
-    final _borderLength = borderLength > cutOutSize / 2 + borderWidthSize ? borderWidthSize / 2 : borderLength;
-    final _cutOutSize = cutOutSize < width ? cutOutSize : width - borderOffset;
+    final effectiveCutOutSize =
+        cutOutSize < width ? cutOutSize : width - borderOffset;
 
     final backgroundPaint = Paint()
       ..color = overlayColor
@@ -244,10 +267,10 @@ class QrScannerOverlayShape extends ShapeBorder {
       ..blendMode = BlendMode.dstOut;
 
     final cutOutRect = Rect.fromLTWH(
-      rect.left + width / 2 - _cutOutSize / 2 + borderOffset,
-      rect.top + height / 2 - _cutOutSize / 2 + borderOffset,
-      _cutOutSize - borderOffset * 2,
-      _cutOutSize - borderOffset * 2,
+      rect.left + width / 2 - effectiveCutOutSize / 2 + borderOffset,
+      rect.top + height / 2 - effectiveCutOutSize / 2 + borderOffset,
+      effectiveCutOutSize - borderOffset * 2,
+      effectiveCutOutSize - borderOffset * 2,
     );
 
     canvas
@@ -259,17 +282,16 @@ class QrScannerOverlayShape extends ShapeBorder {
       )
       ..restore();
 
-    canvas
-      ..drawRRect(
-        RRect.fromRectAndCorners(
-          cutOutRect,
-          topLeft: Radius.circular(borderRadius),
-          topRight: Radius.circular(borderRadius),
-          bottomLeft: Radius.circular(borderRadius),
-          bottomRight: Radius.circular(borderRadius),
-        ),
-        borderPaint,
-      );
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        cutOutRect,
+        topLeft: Radius.circular(borderRadius),
+        topRight: Radius.circular(borderRadius),
+        bottomLeft: Radius.circular(borderRadius),
+        bottomRight: Radius.circular(borderRadius),
+      ),
+      borderPaint,
+    );
   }
 
   @override
