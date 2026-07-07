@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../domain/entities/platform_analytics.dart';
 
@@ -12,11 +13,15 @@ class SuperAdminChartSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     return Column(
       children: [
         _ChartCard(
-          title: 'Booking per Bulan',
-          subtitle: 'Volume booking 6 bulan terakhir',
+          title: strings.tr('Booking per Bulan', 'Bookings per Month'),
+          subtitle: strings.tr(
+            'Volume booking 6 bulan terakhir',
+            'Booking volume for the last 6 months',
+          ),
           child: _BarChartWidget(
             points: analytics.bookingsPerMonth,
             color: AppColors.primary,
@@ -24,8 +29,11 @@ class SuperAdminChartSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ChartCard(
-          title: 'Payment per Bulan',
-          subtitle: 'Pembayaran sukses per bulan',
+          title: strings.tr('Pembayaran per Bulan', 'Payments per Month'),
+          subtitle: strings.tr(
+            'Pembayaran sukses per bulan',
+            'Successful payments per month',
+          ),
           child: _BarChartWidget(
             points: analytics.paymentsPerMonth,
             color: AppColors.secondary,
@@ -38,8 +46,11 @@ class SuperAdminChartSection extends StatelessWidget {
               return Column(
                 children: [
                   _ChartCard(
-                    title: 'User Growth',
-                    subtitle: 'Akumulasi user terdaftar',
+                    title: strings.tr('Pertumbuhan Pengguna', 'User Growth'),
+                    subtitle: strings.tr(
+                      'Akumulasi user terdaftar',
+                      'Accumulated registered users',
+                    ),
                     child: _LineChartWidget(
                       points: analytics.userGrowth,
                       color: AppColors.primaryContainer,
@@ -47,8 +58,11 @@ class SuperAdminChartSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _ChartCard(
-                    title: 'Agency Growth',
-                    subtitle: 'Akumulasi agency terdaftar',
+                    title: strings.tr('Pertumbuhan Agensi', 'Agency Growth'),
+                    subtitle: strings.tr(
+                      'Akumulasi agensi terdaftar',
+                      'Accumulated registered agencies',
+                    ),
                     child: _LineChartWidget(
                       points: analytics.agencyGrowth,
                       color: AppColors.tertiary,
@@ -62,8 +76,11 @@ class SuperAdminChartSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: _ChartCard(
-                    title: 'User Growth',
-                    subtitle: 'Akumulasi user terdaftar',
+                    title: strings.tr('Pertumbuhan Pengguna', 'User Growth'),
+                    subtitle: strings.tr(
+                      'Akumulasi user terdaftar',
+                      'Accumulated registered users',
+                    ),
                     child: _LineChartWidget(
                       points: analytics.userGrowth,
                       color: AppColors.primaryContainer,
@@ -73,8 +90,11 @@ class SuperAdminChartSection extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _ChartCard(
-                    title: 'Agency Growth',
-                    subtitle: 'Akumulasi agency terdaftar',
+                    title: strings.tr('Pertumbuhan Agensi', 'Agency Growth'),
+                    subtitle: strings.tr(
+                      'Akumulasi agensi terdaftar',
+                      'Accumulated registered agencies',
+                    ),
                     child: _LineChartWidget(
                       points: analytics.agencyGrowth,
                       color: AppColors.tertiary,
@@ -87,8 +107,11 @@ class SuperAdminChartSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ChartCard(
-          title: 'Revenue Chart',
-          subtitle: 'Pendapatan dari pembayaran sukses',
+          title: strings.tr('Grafik Pendapatan', 'Revenue Chart'),
+          subtitle: strings.tr(
+            'Pendapatan dari pembayaran sukses',
+            'Revenue from successful payments',
+          ),
           child: _RevenueChartWidget(points: analytics.revenuePerMonth),
         ),
       ],
@@ -115,7 +138,8 @@ class _ChartCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,10 +174,13 @@ class _BarChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (points.isEmpty) {
-      return const Center(child: Text('Belum ada data'));
+      return Center(
+        child: Text(AppStrings.of(context).tr('Belum ada data', 'No data yet')),
+      );
     }
 
-    final maxY = points.map((p) => p.count).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxY =
+        points.map((p) => p.count).reduce((a, b) => a > b ? a : b).toDouble();
 
     return BarChart(
       BarChartData(
@@ -170,18 +197,21 @@ class _BarChartWidget extends StatelessWidget {
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(),
           rightTitles: const AxisTitles(),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= points.length) return const SizedBox.shrink();
+                if (index < 0 || index >= points.length)
+                  return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     points[index].label,
-                    style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+                    style: const TextStyle(
+                        fontSize: 10, color: AppColors.onSurfaceVariant),
                   ),
                 );
               },
@@ -197,7 +227,8 @@ class _BarChartWidget extends StatelessWidget {
                   toY: points[i].count.toDouble(),
                   color: color,
                   width: 18,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(6)),
                 ),
               ],
             ),
@@ -216,10 +247,13 @@ class _LineChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (points.isEmpty) {
-      return const Center(child: Text('Belum ada data'));
+      return Center(
+        child: Text(AppStrings.of(context).tr('Belum ada data', 'No data yet')),
+      );
     }
 
-    final maxY = points.map((p) => p.count).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxY =
+        points.map((p) => p.count).reduce((a, b) => a > b ? a : b).toDouble();
 
     return LineChart(
       LineChartData(
@@ -237,18 +271,21 @@ class _LineChartWidget extends StatelessWidget {
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(),
           rightTitles: const AxisTitles(),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= points.length) return const SizedBox.shrink();
+                if (index < 0 || index >= points.length)
+                  return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     points[index].label,
-                    style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+                    style: const TextStyle(
+                        fontSize: 10, color: AppColors.onSurfaceVariant),
                   ),
                 );
               },
@@ -284,10 +321,13 @@ class _RevenueChartWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (points.isEmpty) {
-      return const Center(child: Text('Belum ada data'));
+      return Center(
+        child: Text(AppStrings.of(context).tr('Belum ada data', 'No data yet')),
+      );
     }
 
-    final currency = NumberFormat.compactCurrency(locale: 'id_ID', symbol: 'Rp');
+    final currency =
+        NumberFormat.compactCurrency(locale: 'id_ID', symbol: 'Rp');
     final maxY = points.map((p) => p.revenue).reduce((a, b) => a > b ? a : b);
 
     return LineChart(
@@ -312,7 +352,8 @@ class _RevenueChartWidget extends StatelessWidget {
               reservedSize: 48,
               getTitlesWidget: (value, meta) => Text(
                 currency.format(value),
-                style: const TextStyle(fontSize: 9, color: AppColors.onSurfaceVariant),
+                style: const TextStyle(
+                    fontSize: 9, color: AppColors.onSurfaceVariant),
               ),
             ),
           ),
@@ -321,12 +362,14 @@ class _RevenueChartWidget extends StatelessWidget {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
-                if (index < 0 || index >= points.length) return const SizedBox.shrink();
+                if (index < 0 || index >= points.length)
+                  return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     points[index].label,
-                    style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+                    style: const TextStyle(
+                        fontSize: 10, color: AppColors.onSurfaceVariant),
                   ),
                 );
               },
