@@ -1,11 +1,11 @@
 {
-    "name": "classrent",
-    "short_name": "classrent",
+    "name": "ClassRent",
+    "short_name": "ClassRent",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F8FB",
+    "theme_color": "#2354C5",
+    "description": "Smart room booking for modern classrooms and teams.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
