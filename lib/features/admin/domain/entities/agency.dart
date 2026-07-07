@@ -16,6 +16,7 @@ class Agency {
     this.description,
     this.logoUrl,
     this.createdAt,
+    this.deletedAt,
     this.roomCount = 0,
     this.bookingCount = 0,
     this.revenue = 0,
@@ -37,14 +38,16 @@ class Agency {
   final String? description;
   final String? logoUrl;
   final DateTime? createdAt;
+  final DateTime? deletedAt;
   final int roomCount;
   final int bookingCount;
   final double revenue;
 
   String get statusLabel {
-    if (approvalStatus == 'pending') return 'Pending';
-    if (approvalStatus == 'rejected') return 'Rejected';
-    if (approvalStatus == 'suspended') return 'Suspended';
-    return isActive ? 'Active' : 'Inactive';
+    if (deletedAt != null) return 'Dihapus';
+    if (approvalStatus == 'pending') return 'Menunggu';
+    if (approvalStatus == 'rejected') return 'Ditolak';
+    if (approvalStatus == 'suspended') return 'Disuspen';
+    return isActive ? 'Aktif' : 'Nonaktif';
   }
 }
