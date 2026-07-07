@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/repositories/auth_repository.dart';
 import '../providers/auth_providers.dart';
+import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_brand_mark.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final bool isRegister;
@@ -25,7 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _agencyAddressController = TextEditingController();
   final _agencyCityController = TextEditingController();
   final _agencyDescriptionController = TextEditingController();
-  
+
   late bool _isRegisterMode;
   bool _isPasswordVisible = false;
   RegistrationType _registrationType = RegistrationType.user;
@@ -77,20 +80,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _forgotPassword() async {
+    final strings = AppStrings.of(context);
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Masukkan email yang valid untuk reset sandi.')),
+          SnackBar(
+            content: Text(
+              strings.tr(
+                'Masukkan email yang valid untuk reset sandi.',
+                'Enter a valid email to reset your password.',
+              ),
+            ),
+          ),
         );
       }
       return;
     }
 
-    final success = await ref.read(authControllerProvider.notifier).resetPassword(email);
+    final success =
+        await ref.read(authControllerProvider.notifier).resetPassword(email);
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email reset sandi telah dikirim. Cek inbox Anda.')),
+        SnackBar(
+          content: Text(
+            strings.tr(
+              'Email reset sandi telah dikirim. Cek inbox Anda.',
+              'Password reset email has been sent. Check your inbox.',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -99,50 +118,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
       ),
-      extendBodyBehindAppBar: true,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.apartment_rounded,
-                    size: 80,
-                    color: theme.colorScheme.primary,
-                  ),
+                  const Center(child: AppBrandMark(size: 72)),
                   const SizedBox(height: 24),
                   Text(
-                    _isRegisterMode ? 'Buat Akun Baru' : 'Selamat Datang Kembali',
+                    _isRegisterMode
+                        ? strings.tr('Buat Akun Baru', 'Create New Account')
+                        : strings.tr(
+                            'Selamat Datang Kembali',
+                            'Welcome Back',
+                          ),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
+                      color: AppColors.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _isRegisterMode 
-                        ? 'Daftar untuk menikmati layanan ClassRent.' 
-                        : 'Masuk dengan email dan kata sandi Anda.',
+                    _isRegisterMode
+                        ? strings.tr(
+                            'Daftar untuk menikmati layanan ClassRent.',
+                            'Register to enjoy ClassRent services.',
+                          )
+                        : strings.tr(
+                            'Masuk dengan email dan kata sandi Anda.',
+                            'Sign in with your email and password.',
+                          ),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: AppColors.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -155,49 +181,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                           if (_isRegisterMode) ...[
                             SegmentedButton<RegistrationType>(
-                              segments: const [
+                              segments: [
                                 ButtonSegment(
                                   value: RegistrationType.user,
-                                  label: Text('Penyewa'),
-                                  icon: Icon(Icons.person_outline),
+                                  label: Text(strings.tr('Penyewa', 'Tenant')),
+                                  icon: const Icon(Icons.person_outline),
                                 ),
                                 ButtonSegment(
                                   value: RegistrationType.agencyAdmin,
-                                  label: Text('Agensi'),
-                                  icon: Icon(Icons.apartment_outlined),
+                                  label: Text(strings.tr('Agensi', 'Agency')),
+                                  icon: const Icon(Icons.apartment_outlined),
                                 ),
                               ],
                               selected: {_registrationType},
                               onSelectionChanged: (selection) {
-                                setState(() => _registrationType = selection.first);
+                                setState(
+                                    () => _registrationType = selection.first);
                               },
                               style: SegmentedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
                               ),
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
                               controller: _fullNameController,
-                              label: 'Nama Lengkap',
+                              label: strings.tr('Nama Lengkap', 'Full Name'),
                               icon: Icons.person_outline,
                               validator: (value) {
                                 if (!_isRegisterMode) return null;
                                 if (value == null || value.trim().length < 3) {
-                                  return 'Masukkan nama lengkap Anda.';
+                                  return strings.tr(
+                                    'Masukkan nama lengkap Anda.',
+                                    'Enter your full name.',
+                                  );
                                 }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
-                            if (_registrationType == RegistrationType.agencyAdmin) ...[
+                            if (_registrationType ==
+                                RegistrationType.agencyAdmin) ...[
                               _buildTextField(
                                 controller: _agencyNameController,
-                                label: 'Nama Agensi',
+                                label: strings.tr('Nama Agensi', 'Agency Name'),
                                 icon: Icons.apartment_outlined,
                                 validator: (value) {
-                                  if (_registrationType != RegistrationType.agencyAdmin) return null;
-                                  if (value == null || value.trim().length < 3) {
-                                    return 'Masukkan nama agensi Anda.';
+                                  if (_registrationType !=
+                                      RegistrationType.agencyAdmin) return null;
+                                  if (value == null ||
+                                      value.trim().length < 3) {
+                                    return strings.tr(
+                                      'Masukkan nama agensi Anda.',
+                                      'Enter your agency name.',
+                                    );
                                   }
                                   return null;
                                 },
@@ -205,13 +242,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                               _buildTextField(
                                 controller: _agencyEmailController,
-                                label: 'Email Agensi',
+                                label:
+                                    strings.tr('Email Agensi', 'Agency Email'),
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
-                                  if (_registrationType != RegistrationType.agencyAdmin) return null;
+                                  if (_registrationType !=
+                                      RegistrationType.agencyAdmin) return null;
                                   if (value == null || !value.contains('@')) {
-                                    return 'Masukkan email agensi yang valid.';
+                                    return strings.tr(
+                                      'Masukkan email agensi yang valid.',
+                                      'Enter a valid agency email.',
+                                    );
                                   }
                                   return null;
                                 },
@@ -219,13 +261,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                               _buildTextField(
                                 controller: _agencyPhoneController,
-                                label: 'Telepon Agensi',
+                                label: strings.tr(
+                                  'Telepon Agensi',
+                                  'Agency Phone',
+                                ),
                                 icon: Icons.phone_outlined,
                                 keyboardType: TextInputType.phone,
                                 validator: (value) {
-                                  if (_registrationType != RegistrationType.agencyAdmin) return null;
-                                  if (value == null || value.trim().length < 5) {
-                                    return 'Masukkan nomor telepon agensi.';
+                                  if (_registrationType !=
+                                      RegistrationType.agencyAdmin) return null;
+                                  if (value == null ||
+                                      value.trim().length < 5) {
+                                    return strings.tr(
+                                      'Masukkan nomor telepon agensi.',
+                                      'Enter the agency phone number.',
+                                    );
                                   }
                                   return null;
                                 },
@@ -233,12 +283,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                               _buildTextField(
                                 controller: _agencyAddressController,
-                                label: 'Alamat Lengkap Agensi',
+                                label: strings.tr(
+                                  'Alamat Lengkap Agensi',
+                                  'Agency Full Address',
+                                ),
                                 icon: Icons.location_on_outlined,
                                 validator: (value) {
-                                  if (_registrationType != RegistrationType.agencyAdmin) return null;
-                                  if (value == null || value.trim().length < 5) {
-                                    return 'Masukkan alamat agensi.';
+                                  if (_registrationType !=
+                                      RegistrationType.agencyAdmin) return null;
+                                  if (value == null ||
+                                      value.trim().length < 5) {
+                                    return strings.tr(
+                                      'Masukkan alamat agensi.',
+                                      'Enter the agency address.',
+                                    );
                                   }
                                   return null;
                                 },
@@ -246,12 +304,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                               _buildTextField(
                                 controller: _agencyCityController,
-                                label: 'Kota Agensi',
+                                label: strings.tr('Kota Agensi', 'Agency City'),
                                 icon: Icons.location_city_outlined,
                                 validator: (value) {
-                                  if (_registrationType != RegistrationType.agencyAdmin) return null;
+                                  if (_registrationType !=
+                                      RegistrationType.agencyAdmin) return null;
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Masukkan kota agensi.';
+                                    return strings.tr(
+                                      'Masukkan kota agensi.',
+                                      'Enter the agency city.',
+                                    );
                                   }
                                   return null;
                                 },
@@ -259,13 +321,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                               _buildTextField(
                                 controller: _agencyDescriptionController,
-                                label: 'Deskripsi Singkat Agensi',
+                                label: strings.tr(
+                                  'Deskripsi Singkat Agensi',
+                                  'Short Agency Description',
+                                ),
                                 icon: Icons.description_outlined,
                                 maxLines: 2,
                                 validator: (value) {
-                                  if (_registrationType != RegistrationType.agencyAdmin) return null;
-                                  if (value == null || value.trim().length < 10) {
-                                    return 'Masukkan deskripsi agensi (min. 10 karakter).';
+                                  if (_registrationType !=
+                                      RegistrationType.agencyAdmin) return null;
+                                  if (value == null ||
+                                      value.trim().length < 10) {
+                                    return strings.tr(
+                                      'Masukkan deskripsi agensi (min. 10 karakter).',
+                                      'Enter an agency description (min. 10 characters).',
+                                    );
                                   }
                                   return null;
                                 },
@@ -275,12 +345,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ],
                           _buildTextField(
                             controller: _emailController,
-                            label: 'Email',
+                            label: strings.tr('Email', 'Email'),
                             icon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
                             validator: (value) {
                               if (value == null || !value.contains('@')) {
-                                return 'Masukkan email yang valid.';
+                                return strings.tr(
+                                  'Masukkan email yang valid.',
+                                  'Enter a valid email.',
+                                );
                               }
                               return null;
                             },
@@ -288,21 +361,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 16),
                           _buildTextField(
                             controller: _passwordController,
-                            label: 'Kata Sandi',
+                            label: strings.tr('Kata Sandi', 'Password'),
                             icon: Icons.lock_outline,
                             obscureText: !_isPasswordVisible,
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                                _isPasswordVisible
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
                               onPressed: () {
-                                setState(() => _isPasswordVisible = !_isPasswordVisible);
+                                setState(() =>
+                                    _isPasswordVisible = !_isPasswordVisible);
                               },
                             ),
                             validator: (value) {
                               if (value == null || value.length < 6) {
-                                return 'Sandi minimal 6 karakter.';
+                                return strings.tr(
+                                  'Sandi minimal 6 karakter.',
+                                  'Password must be at least 6 characters.',
+                                );
                               }
                               return null;
                             },
@@ -317,17 +396,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.errorContainer,
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline, color: theme.colorScheme.error),
+                          const Icon(Icons.error_outline,
+                              color: AppColors.error),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               authState.errorMessage!,
-                              style: TextStyle(color: theme.colorScheme.error),
+                              style: const TextStyle(color: AppColors.error),
                             ),
                           ),
                         ],
@@ -339,7 +419,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: authState.isLoading ? null : _forgotPassword,
-                        child: const Text('Lupa Sandi?'),
+                        child: Text(
+                          strings.tr('Lupa Sandi?', 'Forgot Password?'),
+                        ),
                       ),
                     ),
                   ] else ...[
@@ -347,20 +429,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                   FilledButton(
                     onPressed: authState.isLoading ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                     child: authState.isLoading
                         ? const SizedBox.square(
                             dimension: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
                         : Text(
-                            _isRegisterMode ? 'Daftar Sekarang' : 'Masuk',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            _isRegisterMode
+                                ? strings.tr(
+                                    'Daftar Sekarang',
+                                    'Register Now',
+                                  )
+                                : strings.tr('Masuk', 'Sign In'),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                   const SizedBox(height: 16),
@@ -368,14 +451,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _isRegisterMode ? 'Sudah punya akun?' : 'Belum punya akun?',
-                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                        _isRegisterMode
+                            ? strings.tr(
+                                'Sudah punya akun?',
+                                'Already have an account?',
+                              )
+                            : strings.tr(
+                                'Belum punya akun?',
+                                'Do not have an account?',
+                              ),
+                        style:
+                            const TextStyle(color: AppColors.onSurfaceVariant),
                       ),
                       TextButton(
                         onPressed: authState.isLoading
                             ? null
-                            : () => setState(() => _isRegisterMode = !_isRegisterMode),
-                        child: Text(_isRegisterMode ? 'Masuk' : 'Daftar'),
+                            : () => setState(
+                                () => _isRegisterMode = !_isRegisterMode),
+                        child: Text(
+                          _isRegisterMode
+                              ? strings.tr('Masuk', 'Sign In')
+                              : strings.tr('Daftar', 'Register'),
+                        ),
                       ),
                     ],
                   ),
@@ -404,22 +501,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      textInputAction: onFieldSubmitted != null ? TextInputAction.done : TextInputAction.next,
+      textInputAction: onFieldSubmitted != null
+          ? TextInputAction.done
+          : TextInputAction.next,
       onFieldSubmitted: onFieldSubmitted,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
         suffixIcon: suffixIcon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surface,
       ),
       validator: validator,
     );
