@@ -2,7 +2,15 @@
 
 create or replace function public.current_user_role()
 returns text language sql stable security definer set search_path = public as $$
-  select role from public.users where id = auth.uid() and deleted_at is null
+  select nullif(
+    coalesce(
+      auth.users.raw_app_meta_data ->> 'role',
+      auth.users.raw_user_meta_data ->> 'role'
+    ),
+    ''
+  )
+  from auth.users
+  where id = auth.uid()
 $$;
 
 create or replace function public.is_super_admin()
@@ -68,7 +76,9 @@ alter table public.support_tickets enable row level security;
 alter table public.ticket_messages enable row level security;
 
 create policy users_select_own_or_admin on public.users for select using (id = auth.uid() or public.is_admin_or_super_admin());
-create policy users_update_own_basic on public.users for update using (id = auth.uid()) with check (id = auth.uid() and role = (select role from public.users where id = auth.uid()));
+create policy users_update_own_basic on public.users
+for update using (id = auth.uid())
+with check (id = auth.uid() and role = public.current_user_role());
 create policy users_admin_update on public.users for update using (public.is_super_admin()) with check (public.is_super_admin());
 
 create policy facilities_public_read_active on public.facilities for select using (is_active = true or public.owns_facility(id));
@@ -81,10 +91,24 @@ create policy rooms_admin_insert on public.rooms for insert with check (admin_id
 create policy rooms_admin_update on public.rooms for update using (public.can_manage_room(id)) with check (public.can_manage_room(id));
 create policy rooms_admin_delete on public.rooms for delete using (public.can_manage_room(id));
 
-create policy room_facilities_public_read on public.room_facilities for select using (exists (select 1 from public.rooms r where r.id = room_id and r.is_active and r.deleted_at is null));
+create policy room_facilities_public_read on public.room_facilities for select using (
+  exists (
+    select 1
+    from public.rooms r
+    where r.id = room_id
+      and (r.is_active and r.deleted_at is null or public.can_manage_room(r.id) or public.is_super_admin())
+  )
+);
 create policy room_facilities_admin_write on public.room_facilities for all using (public.can_manage_room(room_id)) with check (public.can_manage_room(room_id));
 
-create policy room_images_public_read on public.room_images for select using (exists (select 1 from public.rooms r where r.id = room_id and r.is_active and r.deleted_at is null));
+create policy room_images_public_read on public.room_images for select using (
+  exists (
+    select 1
+    from public.rooms r
+    where r.id = room_id
+      and (r.is_active and r.deleted_at is null or public.can_manage_room(r.id) or public.is_super_admin())
+  )
+);
 create policy room_images_admin_write on public.room_images for all using (public.can_manage_room(room_id)) with check (public.can_manage_room(room_id));
 
 create policy pricing_public_read_active on public.pricing_rules for select using (is_active = true);
@@ -105,7 +129,14 @@ create policy payment_refunds_admin_read on public.payment_refunds for select us
 
 create policy redemptions_user_read on public.coupon_redemptions for select using (user_id = auth.uid() or exists (select 1 from public.bookings b where b.id = booking_id and public.owns_facility(b.facility_id)) or public.is_super_admin());
 
-create policy schedules_public_read on public.room_schedules for select using (exists (select 1 from public.rooms r where r.id = room_id and r.is_active));
+create policy schedules_public_read on public.room_schedules for select using (
+  exists (
+    select 1
+    from public.rooms r
+    where r.id = room_id
+      and (r.is_active or public.can_manage_room(r.id) or public.is_super_admin())
+  )
+);
 create policy schedules_admin_manage on public.room_schedules for all using (public.can_manage_room(room_id)) with check (public.can_manage_room(room_id));
 
 create policy blackout_public_read on public.blackout_dates for select using (true);
