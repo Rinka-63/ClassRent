@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/app_scaffold.dart';
 import '../../../../../core/widgets/error_card.dart';
@@ -21,9 +22,10 @@ class AdminReportsScreen extends ConsumerWidget {
       symbol: 'Rp ',
       decimalDigits: 0,
     );
+    final strings = AppStrings.of(context);
 
     return AppScaffold(
-      title: 'Reports',
+      title: strings.tr('Laporan', 'Reports'),
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.profile),
@@ -43,48 +45,53 @@ class AdminReportsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             _SummaryCard(
-              title: 'Total Rooms',
+              title: strings.tr('Total Ruangan', 'Total Rooms'),
               value: reports.totalRooms.toString(),
               color: AppColors.primary,
             ),
             _SummaryCard(
-              title: 'Active Rooms',
+              title: strings.tr('Ruangan Aktif', 'Active Rooms'),
               value: reports.activeRooms.toString(),
               color: AppColors.secondary,
             ),
             _SummaryCard(
-              title: 'Need Approval',
+              title: strings.tr('Perlu Persetujuan', 'Need Approval'),
               value: reports.requiresApproval.toString(),
               color: AppColors.tertiary,
             ),
             _SummaryCard(
-              title: 'Total Capacity',
+              title: strings.tr('Total Kapasitas', 'Total Capacity'),
               value: reports.totalCapacity.toString(),
               color: AppColors.primaryContainer,
             ),
             _SummaryCard(
-              title: 'Avg Rating',
+              title: strings.tr('Rating Rata-rata', 'Average Rating'),
               value: reports.averageRating.toStringAsFixed(1),
               color: AppColors.secondary,
             ),
             _SummaryCard(
-              title: 'Price Range',
-              value: '${money.format(reports.hourlyFloor)} - ${money.format(reports.hourlyCeiling)}',
+              title: strings.tr('Rentang Harga', 'Price Range'),
+              value:
+                  '${money.format(reports.hourlyFloor)} - ${money.format(reports.hourlyCeiling)}',
               color: AppColors.primary,
             ),
             const SizedBox(height: 16),
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Laporan ini otomatis diambil dari inventory ruangan. Saat booking dan payment sudah aktif, halaman ini bisa diperluas ke omzet, okupansi, dan funnel booking.',
+                  strings.tr(
+                    'Laporan ini otomatis diambil dari inventori ruangan. Saat booking dan pembayaran sudah aktif, halaman ini bisa diperluas ke omzet, okupansi, dan funnel booking.',
+                    'This report is automatically generated from room inventory. Once bookings and payments are active, this page can be expanded with revenue, occupancy, and booking funnel data.',
+                  ),
                 ),
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: const AdminNavBar(currentPath: AppRoutes.adminReports),
+      bottomNavigationBar:
+          const AdminNavBar(currentPath: AppRoutes.adminReports),
     );
   }
 }
