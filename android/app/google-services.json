@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "819446841171",
+    "project_id": "classrent-aa5c3",
+    "storage_bucket": "classrent-aa5c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819446841171:android:bba60a9324c97134a5eba6",
+        "android_client_info": {
+          "package_name": "com.ti24a4.sewakelas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGIs4J1ywAns4HurYFwopws8DWs3xtY-s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
