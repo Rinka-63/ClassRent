@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,23 +5,25 @@ import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_pending_approval_screen.dart';
 import '../../features/admin/presentation/screens/admin_history_screen.dart';
 import '../../features/admin/presentation/screens/admin_calendar_screen.dart';
-import '../../features/admin/presentation/screens/qr_scanner_screen.dart' as qr_scanner;
-import '../../features/admin/presentation/screens/coupon_management_screen.dart';
+import '../../features/admin/presentation/screens/qr_scanner_screen.dart'
+    as qr_scanner;
 import '../../features/admin/presentation/screens/booking_management_screen.dart';
 import '../../features/admin/presentation/screens/admin_reports_screen.dart';
 import '../../features/admin/presentation/screens/room_management_screen.dart';
 import '../../features/admin/presentation/screens/super_admin/super_admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/super_admin/super_admin_shell_screen.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/auth/presentation/screens/language_selection_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/auth/presentation/screens/update_required_screen.dart';
 import '../../features/auth/presentation/screens/welcome_auth_screen.dart';
 import '../../features/booking/presentation/screens/booking_detail_screen.dart';
 import '../../features/booking/presentation/screens/booking_flow_screen.dart';
 import '../../features/booking/presentation/screens/bookings_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/home/presentation/screens/promo_screen.dart';
+import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/payments/presentation/screens/payments_screen.dart';
 import '../../features/payments/presentation/screens/payment_method_screen.dart';
@@ -34,7 +35,7 @@ import '../../features/rooms/presentation/screens/room_detail_screen.dart';
 import '../../features/support_tickets/presentation/screens/support_tickets_screen.dart';
 import '../../shared/domain/entities/app_user.dart';
 import '../constants/app_routes.dart';
-import '../providers/shared_prefs_provider.dart';
+import '../providers/app_update_provider.dart';
 import 'unauthorized_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -42,33 +43,61 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final user = ref.watch(currentUserProvider);
   final isAuthenticated = ref.watch(isAuthenticatedProvider);
   final isAuthLoading = ref.watch(isAuthLoadingProvider);
-  final hasSeenOnboarding = ref.watch(hasSeenOnboardingProvider);
+  final updateStatus = ref.watch(appUpdateStatusProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     redirect: (context, state) {
       final path = state.uri.path;
-      if (isAuthLoading) return path == AppRoutes.splash ? null : AppRoutes.splash;
-      
-      if (!isAuthenticated) {
-        if (!hasSeenOnboarding && path != AppRoutes.onboarding) {
-          return AppRoutes.onboarding;
-        }
-        if (hasSeenOnboarding && 
-            path != AppRoutes.welcomeAuth && 
-            path != AppRoutes.login && 
-            path != AppRoutes.onboarding) {
-          return AppRoutes.welcomeAuth;
-        }
-        return null;
+      final requiresUpdate = updateStatus.valueOrNull?.requiresUpdate ?? false;
+      if (requiresUpdate && path != AppRoutes.updateRequired) {
+        return AppRoutes.updateRequired;
+      }
+      if (!requiresUpdate && path == AppRoutes.updateRequired) {
+        return AppRoutes.splash;
       }
 
-      if (isAuthenticated && 
-          (path == AppRoutes.login || 
-           path == AppRoutes.splash || 
-           path == AppRoutes.welcomeAuth || 
-           path == AppRoutes.onboarding)) {
+      if (isAuthLoading)
+        return path == AppRoutes.splash ? null : AppRoutes.splash;
+
+      if (isAuthenticated &&
+          (path == AppRoutes.login ||
+              path == AppRoutes.splash ||
+              path == AppRoutes.welcomeAuth ||
+              path == AppRoutes.onboarding ||
+              path == AppRoutes.languageSelection)) {
         return _landingPathFor(user);
+      }
+
+      if (!isAuthenticated) {
+        const allowedUnauthenticatedPaths = {
+          AppRoutes.splash,
+          AppRoutes.updateRequired,
+          AppRoutes.languageSelection,
+          AppRoutes.onboarding,
+          AppRoutes.welcomeAuth,
+          AppRoutes.login,
+        };
+
+        final isProtectedPath = path.startsWith('/admin') ||
+            path.startsWith('/super-admin') ||
+            path == AppRoutes.home ||
+            path == AppRoutes.search ||
+            path == AppRoutes.favorites ||
+            path == AppRoutes.bookings ||
+            path == AppRoutes.notifications ||
+            path == AppRoutes.payments ||
+            path == AppRoutes.paymentMethod ||
+            path == AppRoutes.paymentWebView ||
+            path == AppRoutes.profile ||
+            path == AppRoutes.agencyProfile ||
+            path == AppRoutes.support ||
+            path.startsWith('/rooms/') ||
+            path.startsWith('/bookings/');
+
+        if (!allowedUnauthenticatedPaths.contains(path) && isProtectedPath) {
+          return AppRoutes.welcomeAuth;
+        }
       }
 
       if (role == UserRole.admin &&
@@ -92,8 +121,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
-      GoRoute(path: AppRoutes.onboarding, builder: (_, __) => const OnboardingScreen()),
-      GoRoute(path: AppRoutes.welcomeAuth, builder: (_, __) => const WelcomeAuthScreen()),
+      GoRoute(
+        path: AppRoutes.updateRequired,
+        builder: (_, __) => const UpdateRequiredScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.languageSelection,
+        builder: (_, __) => const LanguageSelectionScreen(),
+      ),
+      GoRoute(
+          path: AppRoutes.onboarding,
+          builder: (_, __) => const OnboardingScreen()),
+      GoRoute(
+          path: AppRoutes.welcomeAuth,
+          builder: (_, __) => const WelcomeAuthScreen()),
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) {
@@ -104,8 +145,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: AppRoutes.home, builder: (_, __) => const HomeScreen()),
       GoRoute(
-        path: AppRoutes.promos,
-        builder: (_, __) => const PromoScreen(),
+        path: AppRoutes.search,
+        builder: (_, __) => const SearchScreen(),
       ),
       GoRoute(
         path: AppRoutes.favorites,
@@ -148,7 +189,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.notifications,
         builder: (_, __) => const NotificationsScreen(),
       ),
-      GoRoute(path: AppRoutes.profile, builder: (_, __) => const ProfileScreen()),
+      GoRoute(
+          path: AppRoutes.profile, builder: (_, __) => const ProfileScreen()),
       GoRoute(
         path: AppRoutes.agencyProfile,
         builder: (_, __) => const AgencyProfileScreen(),
@@ -163,7 +205,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           roomId: state.pathParameters['roomId']!,
         ),
       ),
-      GoRoute(path: AppRoutes.admin, builder: (_, __) => const AdminDashboardScreen()),
+      GoRoute(
+          path: AppRoutes.admin,
+          builder: (_, __) => const AdminDashboardScreen()),
       GoRoute(
         path: AppRoutes.adminReports,
         builder: (_, __) => const AdminReportsScreen(),
@@ -179,10 +223,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.adminScanner,
         builder: (_, __) => const qr_scanner.AdminScannerScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminCoupons,
-        builder: (_, __) => const CouponManagementScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminPending,
@@ -216,8 +256,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 String _landingPathFor(AppUser? user) {
   return switch (user?.role ?? UserRole.user) {
-    UserRole.admin =>
-      user?.hasApprovedAgency == true ? AppRoutes.admin : AppRoutes.adminPending,
+    UserRole.admin => user?.hasApprovedAgency == true
+        ? AppRoutes.admin
+        : AppRoutes.adminPending,
     UserRole.superAdmin => AppRoutes.superAdmin,
     UserRole.user => AppRoutes.home,
   };
