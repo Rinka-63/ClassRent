@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../domain/entities/coupon.dart';
+
 import '../../../rooms/domain/entities/room.dart';
 
 enum BookingStep { selectDate, confirmDetails }
@@ -14,7 +14,7 @@ class BookingFlowState {
     this.selectedDate,
     this.startTime,
     this.endTime,
-    this.appliedCoupon,
+
     this.isProcessing = false,
   });
 
@@ -24,7 +24,7 @@ class BookingFlowState {
   final DateTime? selectedDate;
   final TimeOfDay? startTime;
   final TimeOfDay? endTime;
-  final Coupon? appliedCoupon;
+
   final bool isProcessing;
 
   BookingFlowState copyWith({
@@ -34,8 +34,7 @@ class BookingFlowState {
     DateTime? selectedDate,
     TimeOfDay? startTime,
     TimeOfDay? endTime,
-    Coupon? appliedCoupon,
-    bool clearCoupon = false,
+
     bool? isProcessing,
   }) {
     return BookingFlowState(
@@ -45,7 +44,7 @@ class BookingFlowState {
       selectedDate: selectedDate ?? this.selectedDate,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
-      appliedCoupon: clearCoupon ? null : (appliedCoupon ?? this.appliedCoupon),
+
       isProcessing: isProcessing ?? this.isProcessing,
     );
   }
@@ -63,17 +62,7 @@ class BookingFlowState {
     return room!.hourlyRate * durationHours;
   }
 
-  double get discountAmount {
-    if (appliedCoupon == null || basePrice <= 0) return 0;
-    final maxDiscount = appliedCoupon!.maxDiscountAmount;
-    final discount = basePrice * (appliedCoupon!.discountPercent / 100);
-    if (maxDiscount != null && discount > maxDiscount) {
-      return maxDiscount;
-    }
-    return discount;
-  }
-
-  double get finalPrice => basePrice - discountAmount;
+  double get finalPrice => basePrice;
 }
 
 class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
@@ -89,13 +78,7 @@ class BookingFlowNotifier extends StateNotifier<BookingFlowState> {
     state = state.copyWith(selectedDate: date, startTime: start, endTime: end);
   }
 
-  void applyCoupon(Coupon coupon) {
-    state = state.copyWith(appliedCoupon: coupon);
-  }
 
-  void removeCoupon() {
-    state = state.copyWith(clearCoupon: true);
-  }
   
   void setProcessing(bool value) {
     state = state.copyWith(isProcessing: value);
