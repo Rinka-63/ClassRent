@@ -2,6 +2,8 @@ class AppRoutes {
   const AppRoutes._();
 
   static const splash = '/';
+  static const updateRequired = '/update-required';
+  static const languageSelection = '/language';
   static const onboarding = '/onboarding';
   static const welcomeAuth = '/welcome-auth';
   static const login = '/login';
@@ -13,7 +15,6 @@ class AppRoutes {
   static const paymentMethod = '/payments/method/:bookingId';
   static const paymentWebView = '/payments/webview/:bookingId';
   static const payments = '/payments';
-  static const promos = '/promos';
   static const profile = '/profile';
   static const agencyProfile = '/agency-profile';
   static const notifications = '/notifications';
@@ -25,7 +26,6 @@ class AppRoutes {
   static const adminHistory = '/admin/history';
   static const adminCalendar = '/admin/calendar';
   static const adminScanner = '/admin/scanner';
-  static const adminCoupons = '/admin/coupons';
   static const superAdmin = '/super-admin';
   static const superAdminSettings = '/super-admin/settings';
   static const roomManagement = '/admin/rooms';
