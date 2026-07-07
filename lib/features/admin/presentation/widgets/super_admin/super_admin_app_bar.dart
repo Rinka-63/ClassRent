@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/constants/app_routes.dart';
+import '../../../../../core/l10n/app_strings.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/app_brand_mark.dart';
 import '../../../../auth/presentation/providers/auth_providers.dart';
 
 class SuperAdminAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -21,24 +23,26 @@ class SuperAdminAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
+    final theme = Theme.of(context);
     return AppBar(
-      toolbarHeight: 72,
+      toolbarHeight: 64,
       centerTitle: true,
       title: Column(
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: AppColors.onPrimary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
-            'ClassRent Super Admin Panel',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
-                  letterSpacing: 0.2,
-                ),
+            strings.superAdminPanel,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.onPrimary.withValues(alpha: 0.82),
+            ),
           ),
         ],
       ),
@@ -53,29 +57,24 @@ class SuperAdminAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 }
               },
             )
-          : Padding(
-              padding: const EdgeInsets.only(left: 12),
+          : const Padding(
+              padding: EdgeInsets.only(left: 8),
               child: Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.school_outlined, color: Colors.white, size: 22),
+                child: AppBrandMark(
+                  size: 36,
+                  backgroundColor: AppColors.onPrimary,
                 ),
               ),
             ),
       actions: [
         if (!showBackButton)
           IconButton(
-            tooltip: 'Settings',
+            tooltip: strings.settings,
             onPressed: () => context.push(AppRoutes.superAdminSettings),
             icon: const Icon(Icons.settings_outlined),
           ),
         IconButton(
-          tooltip: 'Logout',
+          tooltip: strings.logout,
           onPressed: () async {
             await ref.read(authControllerProvider.notifier).logout();
             if (context.mounted) context.go(AppRoutes.login);
