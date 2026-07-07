@@ -5,188 +5,200 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/status_badge.dart';
 import '../providers/favorites_provider.dart';
 import '../../domain/entities/room.dart';
-import '../providers/rooms_providers.dart';
-
-// Map dari tag ke icon
-const _facilityIcons = <String, IconData>{
-  'wifi': Icons.wifi,
-  'ac': Icons.ac_unit,
-  'projector': Icons.cast,
-  'whiteboard': Icons.edit_note_outlined,
-  'sound_system': Icons.speaker_outlined,
-  'microphone': Icons.mic_outlined,
-  'tv': Icons.smart_display_outlined,
-  'parking': Icons.local_parking_outlined,
-  'toilet': Icons.wc_outlined,
-  'kitchen': Icons.kitchen_outlined,
-  'camera': Icons.videocam_outlined,
-  'printer': Icons.print_outlined,
-};
 
 class RoomCard extends ConsumerWidget {
-  const RoomCard({required this.room, super.key});
+  const RoomCard({
+    required this.room,
+    this.showFavorite = true,
+    this.trailing,
+    super.key,
+  });
 
   final Room room;
+  final bool showFavorite;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final favoriteState = ref.watch(favoritesProvider);
     final favoriteIds = favoriteState.valueOrNull ?? {};
-    final facilitiesAsync = ref.watch(roomFacilitiesProvider(room.id));
-    final money = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final money =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
+    final isAvailable = room.isActive;
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: AppColors.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
+      color: colorScheme.surface,
       child: InkWell(
-        onTap: () => context.push(AppRoutes.roomDetail.replaceFirst(':roomId', room.id)),
+        onTap: () =>
+            context.push(AppRoutes.roomDetail.replaceFirst(':roomId', room.id)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar / placeholder
             Stack(
               children: [
                 Container(
-                  height: 130,
+                  height: 132,
                   width: double.infinity,
-                  color: AppColors.primaryContainer.withValues(alpha: 0.18),
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.18),
                   alignment: Alignment.center,
-                  child: room.previewUrl != null
+                  child: room.previewUrl != null && room.previewUrl!.isNotEmpty
                       ? Image.network(
                           room.previewUrl!,
                           fit: BoxFit.cover,
                           width: double.infinity,
-                          height: 130,
+                          height: 132,
                           errorBuilder: (_, __, ___) => const Icon(
-                              Icons.meeting_room_outlined,
-                              size: 48,
-                              color: AppColors.primary),
+                            Icons.meeting_room_outlined,
+                            size: 48,
+                            color: AppColors.primary,
+                          ),
                         )
-                      : const Icon(Icons.meeting_room_outlined,
-                          size: 48, color: AppColors.primary),
+                      : const Icon(
+                          Icons.meeting_room_outlined,
+                          size: 48,
+                          color: AppColors.primary,
+                        ),
                 ),
-                // Tombol favorit
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Material(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(999),
-                    child: InkWell(
+                if (room.avgRating > 0)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 14, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text(
+                            room.avgRating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: AppColors.onSurface,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (showFavorite)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Material(
+                      color: colorScheme.surface.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(999),
-                      onTap: () => ref.read(favoritesProvider.notifier).toggleFavorite(room.id),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          favoriteIds.contains(room.id)
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          color: favoriteIds.contains(room.id)
-                              ? Colors.red
-                              : AppColors.onSurfaceVariant,
-                          size: 20,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: () => ref
+                            .read(favoritesProvider.notifier)
+                            .toggleFavorite(room.id),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            favoriteIds.contains(room.id)
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: favoriteIds.contains(room.id)
+                                ? AppColors.error
+                                : AppColors.onSurfaceVariant,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                if (trailing != null)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: trailing!,
+                  ),
               ],
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Nama room
                     Text(
                       room.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
+                      style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 3),
-                    // Lokasi + kapasitas
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 13, color: AppColors.onSurfaceVariant),
-                        const SizedBox(width: 2),
+                        const Icon(Icons.location_on,
+                            size: 14, color: AppColors.onSurfaceVariant),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            '${room.city} • ${room.capacity} kursi',
+                            room.city,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.onSurfaceVariant,
-                                ),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    // Fasilitas icons
-                    facilitiesAsync.when(
-                      loading: () => const SizedBox(height: 20),
-                      error: (_, __) => const SizedBox(height: 20),
-                      data: (facilities) {
-                        if (facilities.isEmpty) return const SizedBox(height: 20);
-                        final display = facilities.take(3).toList();
-                        final extra = facilities.length - display.length;
-                        return Row(
-                          children: [
-                            ...display.map(
-                              (tag) => Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: Icon(
-                                  _facilityIcons[tag] ?? Icons.check_circle_outline,
-                                  size: 16,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                            if (extra > 0)
-                              Text(
-                                '+$extra',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: AppColors.onSurfaceVariant,
-                                    ),
-                              ),
-                          ],
-                        );
-                      },
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        if (isAvailable)
+                          const StatusBadge.available()
+                        else
+                          const StatusBadge.full(),
+                        if (room.avgRating >= 4) const StatusBadge.verified(),
+                      ],
                     ),
                     const Spacer(),
-                    // Rating + harga
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.star_rounded,
-                            size: 15, color: Colors.amber),
-                        const SizedBox(width: 3),
                         Text(
-                          room.avgRating.toStringAsFixed(1),
-                          style: Theme.of(context).textTheme.labelMedium,
+                          money.format(room.hourlyRate),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
                         ),
-                        const Spacer(),
-                        Flexible(
-                          child: Text(
-                            '${money.format(room.hourlyRate)}/jam',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '/ jam • ${room.capacity} kursi',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
