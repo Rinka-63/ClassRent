@@ -15,7 +15,7 @@ class SupabaseNotificationsRepository {
       final rows = await _service.requireClient
           .from(SupabaseTables.notifications)
           .select()
-          .eq('user_id', userId)
+          .eq('receiver_id', userId)
           .order('created_at', ascending: false);
       return right(rows.map(_fromJson).toList());
     } catch (error) {
@@ -27,7 +27,6 @@ class SupabaseNotificationsRepository {
     try {
       await _service.requireClient.from(SupabaseTables.notifications).update({
         'is_read': true,
-        'read_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', notificationId);
       return right(unit);
     } catch (error) {
@@ -38,7 +37,7 @@ class SupabaseNotificationsRepository {
   AppNotification _fromJson(Map<String, dynamic> json) {
     return AppNotification(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
+      userId: (json['receiver_id'] ?? json['user_id']) as String,
       type: json['type'] as String,
       title: json['title'] as String,
       body: json['body'] as String,
