@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../rooms/presentation/providers/rooms_providers.dart';
@@ -17,30 +18,35 @@ class BookingDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context);
     final userBookingsAsync = ref.watch(userBookingsProvider);
     final agencyBookingsAsync = ref.watch(agencyBookingsProvider);
 
-    final isLoading = userBookingsAsync.isLoading || agencyBookingsAsync.isLoading;
+    final isLoading =
+        userBookingsAsync.isLoading || agencyBookingsAsync.isLoading;
     final hasError = userBookingsAsync.hasError && agencyBookingsAsync.hasError;
     final error = userBookingsAsync.error ?? agencyBookingsAsync.error;
 
     if (isLoading) {
-      return const AppScaffold(
-        title: 'Invoice & Tiket',
-        body: Center(child: CircularProgressIndicator()),
+      return AppScaffold(
+        title: strings.tr('Invoice & Tiket', 'Invoice & Ticket'),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (hasError) {
       return AppScaffold(
-        title: 'Invoice & Tiket',
+        title: strings.tr('Invoice & Tiket', 'Invoice & Ticket'),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.error_outline, size: 48, color: AppColors.error),
               const SizedBox(height: 16),
-              Text('Terjadi kesalahan:\n$error', textAlign: TextAlign.center),
+              Text(
+                '${strings.tr('Terjadi kesalahan', 'Something went wrong')}:\n$error',
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -51,12 +57,20 @@ class BookingDetailScreen extends ConsumerWidget {
     final agencyBookings = agencyBookingsAsync.valueOrNull ?? [];
     final allBookings = [...userBookings, ...agencyBookings];
     final booking = allBookings.where((b) => b.id == bookingId).firstOrNull;
-    final isAdminView = agencyBookings.any((b) => b.id == bookingId) && !userBookings.any((b) => b.id == bookingId);
+    final isAdminView = agencyBookings.any((b) => b.id == bookingId) &&
+        !userBookings.any((b) => b.id == bookingId);
 
     return AppScaffold(
-      title: 'Invoice & Tiket',
+      title: strings.tr('Invoice & Tiket', 'Invoice & Ticket'),
       body: booking == null || booking.id.isEmpty
-          ? const Center(child: Text('Pemesanan tidak ditemukan'))
+          ? Center(
+              child: Text(
+                strings.tr(
+                  'Pemesanan tidak ditemukan',
+                  'Booking not found',
+                ),
+              ),
+            )
           : _InvoiceContent(booking: booking, isAdminView: isAdminView),
     );
   }
@@ -71,16 +85,20 @@ class _InvoiceContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roomAsync = ref.watch(roomDetailProvider(booking.roomId));
-    final money = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final strings = AppStrings.of(context);
+    final money =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
     final dateFormatter = DateFormat('dd MMM yyyy', 'id_ID');
 
     final isConfirmed = booking.status.toLowerCase() == 'confirmed';
-    final isPending = booking.status.toLowerCase() == 'pending_payment' || booking.status.toLowerCase() == 'pending_approval';
+    final isPending = booking.status.toLowerCase() == 'pending_payment' ||
+        booking.status.toLowerCase() == 'pending_approval';
 
     final statusColor = switch (booking.status.toLowerCase()) {
       'confirmed' => Colors.green.shade600,
       'pending_payment' || 'pending_approval' => Colors.orange.shade600,
       'cancelled' || 'rejected' => AppColors.error,
+      'expired' => AppColors.onSurfaceVariant,
       _ => AppColors.onSurfaceVariant,
     };
 
@@ -88,15 +106,19 @@ class _InvoiceContent extends ConsumerWidget {
       'confirmed' => Icons.check_circle_outline,
       'pending_payment' || 'pending_approval' => Icons.schedule,
       'cancelled' || 'rejected' => Icons.cancel_outlined,
+      'expired' => Icons.event_busy_outlined,
       _ => Icons.info_outline,
     };
 
     final statusText = switch (booking.status.toLowerCase()) {
-      'confirmed' => 'LUNAS & DIKONFIRMASI',
-      'pending_payment' => 'MENUNGGU PEMBAYARAN',
-      'pending_approval' => 'MENUNGGU PERSETUJUAN',
-      'cancelled' => 'DIBATALKAN',
-      'rejected' => 'DITOLAK',
+      'confirmed' => strings.tr('LUNAS & DIKONFIRMASI', 'PAID & CONFIRMED'),
+      'pending_payment' =>
+        strings.tr('MENUNGGU PEMBAYARAN', 'WAITING FOR PAYMENT'),
+      'pending_approval' =>
+        strings.tr('MENUNGGU PERSETUJUAN', 'WAITING FOR APPROVAL'),
+      'cancelled' => strings.tr('DIBATALKAN', 'CANCELLED'),
+      'rejected' => strings.tr('DITOLAK', 'REJECTED'),
+      'expired' => strings.tr('KADALUARSA', 'EXPIRED'),
       _ => booking.status.toUpperCase(),
     };
 
@@ -121,12 +143,16 @@ class _InvoiceContent extends ConsumerWidget {
                   children: [
                     Text(
                       statusText,
-                      style: TextStyle(color: statusColor, fontWeight: FontWeight.w800, fontSize: 14),
+                      style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'ID Pesanan: ${booking.id.substring(0, 8).toUpperCase()}',
-                      style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
+                      style: const TextStyle(
+                          color: AppColors.onSurfaceVariant, fontSize: 12),
                     ),
                   ],
                 ),
@@ -157,13 +183,18 @@ class _InvoiceContent extends ConsumerWidget {
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: AppColors.primaryContainer.withValues(alpha: 0.05),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   child: Column(
                     children: [
-                      const Text(
-                        'E-Ticket Check-In / Out',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                      Text(
+                        strings.tr(
+                          'E-Ticket Check-In / Out',
+                          'Check-In / Out E-Ticket',
+                        ),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 16),
                       ),
                       const SizedBox(height: 16),
                       Container(
@@ -187,9 +218,13 @@ class _InvoiceContent extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Tunjukkan kode QR ini kepada resepsionis',
-                        style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
+                      Text(
+                        strings.tr(
+                          'Tunjukkan kode QR ini kepada resepsionis',
+                          'Show this QR code to the receptionist',
+                        ),
+                        style: TextStyle(
+                            color: AppColors.onSurfaceVariant, fontSize: 12),
                       ),
                     ],
                   ),
@@ -199,17 +234,56 @@ class _InvoiceContent extends ConsumerWidget {
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.hourglass_empty, size: 48, color: Colors.orange),
-                        SizedBox(height: 12),
+                        const Icon(Icons.hourglass_empty,
+                            size: 48, color: Colors.orange),
+                        const SizedBox(height: 12),
                         Text(
-                          'Selesaikan pembayaran untuk\nmendapatkan E-Ticket',
+                          strings.tr(
+                            'Selesaikan pembayaran untuk\nmendapatkan E-Ticket',
+                            'Complete payment to\nget your E-Ticket',
+                          ),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ] else if (booking.status.toLowerCase() == 'expired') ...[
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLow,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.qr_code_2_outlined,
+                          size: 48,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          strings.tr(
+                            'QR Code sudah kadaluarsa',
+                            'QR Code has expired',
+                          ),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -226,7 +300,8 @@ class _InvoiceContent extends ConsumerWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+                        borderRadius: const BorderRadius.horizontal(
+                            right: Radius.circular(10)),
                       ),
                     ),
                   ),
@@ -242,7 +317,9 @@ class _InvoiceContent extends ConsumerWidget {
                             (index) => SizedBox(
                               width: 5,
                               height: 1.5,
-                              child: DecoratedBox(decoration: BoxDecoration(color: Colors.grey.shade300)),
+                              child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                      color: Colors.grey.shade300)),
                             ),
                           ),
                         );
@@ -255,7 +332,8 @@ class _InvoiceContent extends ConsumerWidget {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+                        borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(10)),
                       ),
                     ),
                   ),
@@ -268,7 +346,12 @@ class _InvoiceContent extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('DETAIL RUANGAN', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                    Text(strings.tr('DETAIL RUANGAN', 'ROOM DETAILS'),
+                        style: const TextStyle(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1)),
                     const SizedBox(height: 12),
                     roomAsync.when(
                       loading: () => const SizedBox(
@@ -277,7 +360,9 @@ class _InvoiceContent extends ConsumerWidget {
                       ),
                       error: (e, _) => SizedBox(
                         height: 60,
-                        child: Text('Gagal memuat info ruangan: $e', style: const TextStyle(color: AppColors.error)),
+                        child: Text(
+                            '${strings.tr('Gagal memuat info ruangan', 'Failed to load room info')}: $e',
+                            style: const TextStyle(color: AppColors.error)),
                       ),
                       data: (room) => Row(
                         children: [
@@ -285,21 +370,31 @@ class _InvoiceContent extends ConsumerWidget {
                             width: 56,
                             height: 56,
                             decoration: BoxDecoration(
-                              color: AppColors.primaryContainer.withValues(alpha: 0.1),
+                              color: AppColors.primaryContainer
+                                  .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.meeting_room, color: AppColors.primary),
+                            child: const Icon(Icons.meeting_room,
+                                color: AppColors.primary),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(room.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                                Text(room.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16)),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${room.city} • Kapasitas ${room.capacity} org',
-                                  style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
+                                  strings.tr(
+                                    '${room.city} - Kapasitas ${room.capacity} orang',
+                                    '${room.city} - Capacity ${room.capacity} people',
+                                  ),
+                                  style: const TextStyle(
+                                      color: AppColors.onSurfaceVariant,
+                                      fontSize: 13),
                                 ),
                               ],
                             ),
@@ -308,7 +403,12 @@ class _InvoiceContent extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('JADWAL', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                    Text(strings.tr('JADWAL', 'SCHEDULE'),
+                        style: const TextStyle(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1)),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -342,27 +442,31 @@ class _InvoiceContent extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('RINCIAN PEMBAYARAN', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                    Text(strings.tr('RINCIAN PEMBAYARAN', 'PAYMENT DETAILS'),
+                        style: const TextStyle(
+                            color: AppColors.onSurfaceVariant,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1)),
                     const SizedBox(height: 16),
-                    _SummaryRow(label: 'Total Harga Ruangan', value: money.format(booking.basePrice)),
-                    const SizedBox(height: 8),
-                    if (booking.basePrice > booking.finalPrice) ...[
-                      _SummaryRow(
-                        label: 'Diskon / Voucher',
-                        value: '- ${money.format(booking.basePrice - booking.finalPrice)}',
-                        isDiscount: true,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                    _SummaryRow(
+                        label: strings.tr(
+                            'Total Harga Ruangan', 'Room Price Total'),
+                        value: money.format(booking.basePrice)),
                     const Divider(),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Total Pembayaran', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        Text(strings.tr('Total Pembayaran', 'Total Payment'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 14)),
                         Text(
                           money.format(booking.finalPrice),
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: AppColors.primary),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                              color: AppColors.primary),
                         ),
                       ],
                     ),
@@ -379,11 +483,19 @@ class _InvoiceContent extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Invoice berhasil diunduh ke perangkat Anda.')),
+                SnackBar(
+                  content: Text(
+                    strings.tr(
+                      'Invoice berhasil diunduh ke perangkat Anda.',
+                      'Invoice downloaded to your device.',
+                    ),
+                  ),
+                ),
               );
             },
             icon: const Icon(Icons.download),
-            label: const Text('Unduh PDF Invoice'),
+            label:
+                Text(strings.tr('Unduh PDF Invoice', 'Download PDF Invoice')),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: const BorderSide(color: AppColors.primary),
@@ -395,7 +507,8 @@ class _InvoiceContent extends ConsumerWidget {
 }
 
 class _ScheduleBox extends StatelessWidget {
-  const _ScheduleBox({required this.label, required this.date, required this.time});
+  const _ScheduleBox(
+      {required this.label, required this.date, required this.time});
 
   final String label;
   final String date;
@@ -413,11 +526,19 @@ class _ScheduleBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppColors.onSurfaceVariant, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          Text(date,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 2),
-          Text(time, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.primary)),
+          Text(time,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppColors.primary)),
         ],
       ),
     );
@@ -425,24 +546,25 @@ class _ScheduleBox extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value, this.isDiscount = false});
+  const _SummaryRow({required this.label, required this.value});
 
   final String label;
   final String value;
-  final bool isDiscount;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13)),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.onSurfaceVariant, fontSize: 13)),
         Text(
           value,
-          style: TextStyle(
-            fontWeight: isDiscount ? FontWeight.w700 : FontWeight.w600,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
             fontSize: 13,
-            color: isDiscount ? Colors.green.shade600 : AppColors.onSurface,
+            color: AppColors.onSurface,
           ),
         ),
       ],
