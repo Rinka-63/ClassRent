@@ -5,12 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/widgets/error_card.dart';
 import '../../../../shared/domain/entities/app_user.dart';
 import '../../../../shared/presentation/widgets/admin_nav_bar.dart';
 import '../../../../shared/presentation/widgets/role_aware_nav_bar.dart';
+import '../../../../shared/presentation/widgets/image_preview_dialog.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../booking/presentation/providers/booking_admin_providers.dart';
 import '../../domain/entities/room.dart';
@@ -24,8 +26,10 @@ const _kFacilityMeta = <String, _FacilityMeta>{
   'wifi': _FacilityMeta(label: 'WiFi', icon: Icons.wifi),
   'ac': _FacilityMeta(label: 'AC', icon: Icons.ac_unit),
   'projector': _FacilityMeta(label: 'Proyektor', icon: Icons.cast),
-  'whiteboard': _FacilityMeta(label: 'Whiteboard', icon: Icons.edit_note_outlined),
-  'sound_system': _FacilityMeta(label: 'Sound System', icon: Icons.speaker_outlined),
+  'whiteboard':
+      _FacilityMeta(label: 'Whiteboard', icon: Icons.edit_note_outlined),
+  'sound_system':
+      _FacilityMeta(label: 'Sound System', icon: Icons.speaker_outlined),
   'microphone': _FacilityMeta(label: 'Mikrofon', icon: Icons.mic_outlined),
   'tv': _FacilityMeta(label: 'Smart TV', icon: Icons.smart_display_outlined),
   'parking': _FacilityMeta(label: 'Parkir', icon: Icons.local_parking_outlined),
@@ -52,18 +56,22 @@ class RoomDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final roomValue = ref.watch(roomDetailProvider(roomId));
     final user = ref.watch(currentUserProvider);
-    final isAdmin = user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final isAdmin =
+        user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final strings = AppStrings.of(context);
 
     return AppScaffold(
-      title: 'Detail Ruangan',
+      title: strings.roomDetail,
       actions: [
         if (!isAdmin)
           Consumer(
             builder: (context, ref, _) {
-              final favoriteIds = ref.watch(favoritesProvider).valueOrNull ?? {};
+              final favoriteIds =
+                  ref.watch(favoritesProvider).valueOrNull ?? {};
               final isFav = favoriteIds.contains(roomId);
               return IconButton(
-                onPressed: () => ref.read(favoritesProvider.notifier).toggleFavorite(roomId),
+                onPressed: () =>
+                    ref.read(favoritesProvider.notifier).toggleFavorite(roomId),
                 icon: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border,
                   color: isFav ? Colors.red : null,
@@ -99,11 +107,11 @@ class RoomDetailScreen extends ConsumerWidget {
                 pinned: true,
                 delegate: _TabHeader(
                   TabBar(
-                    tabs: const [
-                      Tab(text: 'Overview'),
-                      Tab(text: 'Fasilitas'),
-                      Tab(text: 'Jadwal'),
-                      Tab(text: 'Booking'),
+                    tabs: [
+                      Tab(text: strings.tr('Overview', 'Overview')),
+                      Tab(text: strings.facilities),
+                      Tab(text: strings.tr('Jadwal', 'Schedule')),
+                      Tab(text: strings.bookings),
                     ],
                     labelColor: AppColors.primary,
                     indicatorColor: AppColors.primary,
@@ -117,7 +125,7 @@ class RoomDetailScreen extends ConsumerWidget {
                 _OverviewTab(room: room),
                 _FacilitiesTab(roomId: room.id, isAdmin: isAdmin),
                 _ScheduleTab(roomId: room.id, isAdmin: isAdmin),
-                _BookingsTab(roomId: room.id, isAdmin: isAdmin),
+                _BookingsTab(roomId: room.id),
               ],
             ),
           ),
@@ -137,14 +145,20 @@ class _RoomHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final strings = AppStrings.of(context);
+    final money =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
         boxShadow: const [
-          BoxShadow(color: Color(0x10000000), blurRadius: 16, offset: Offset(0, 6)),
+          BoxShadow(
+              color: Color(0x10000000), blurRadius: 16, offset: Offset(0, 6)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -155,20 +169,24 @@ class _RoomHero extends StatelessWidget {
           Container(
             height: 200,
             width: double.infinity,
-            color: AppColors.primaryContainer.withValues(alpha: 0.14),
+            color: colorScheme.primaryContainer.withValues(alpha: 0.14),
             alignment: Alignment.center,
             child: room.previewUrl != null
-                ? Image.network(
-                    room.previewUrl!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: 200,
-                    errorBuilder: (_, __, ___) => const Icon(
-                        Icons.meeting_room_outlined,
-                        size: 72,
-                        color: AppColors.primary),
+                ? GestureDetector(
+                    onTap: () => showImagePreview(context, room.previewUrl!),
+                    child: Image.network(
+                      room.previewUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 200,
+                      errorBuilder: (_, __, ___) => const Icon(
+                          Icons.meeting_room_outlined,
+                          size: 72,
+                          color: AppColors.primary),
+                    ),
                   )
-                : const Icon(Icons.meeting_room_outlined, size: 72, color: AppColors.primary),
+                : const Icon(Icons.meeting_room_outlined,
+                    size: 72, color: AppColors.primary),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -178,26 +196,29 @@ class _RoomHero extends StatelessWidget {
                 // Nama room
                 Text(
                   room.name,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
+                  style: theme.textTheme.headlineSmall
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 16, color: AppColors.onSurfaceVariant),
+                    const Icon(Icons.location_on_outlined,
+                        size: 16, color: AppColors.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text(
                       room.city,
-                      style: const TextStyle(color: AppColors.onSurfaceVariant),
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(Icons.people_outline, size: 16, color: AppColors.onSurfaceVariant),
+                    const Icon(Icons.people_outline,
+                        size: 16, color: AppColors.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text(
-                      '${room.capacity} kursi',
-                      style: const TextStyle(color: AppColors.onSurfaceVariant),
+                      strings.tr(
+                        '${room.capacity} kursi',
+                        '${room.capacity} seats',
+                      ),
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -212,9 +233,14 @@ class _RoomHero extends StatelessWidget {
                       icon: Icons.meeting_room_outlined,
                     ),
                     _InfoChip(
-                      text: room.isActive ? 'Tersedia' : 'Tidak Aktif',
-                      icon: room.isActive ? Icons.check_circle_outline : Icons.cancel_outlined,
-                      color: room.isActive ? AppColors.secondary : AppColors.error,
+                      text: room.isActive
+                          ? strings.available
+                          : strings.tr('Tidak Aktif', 'Inactive'),
+                      icon: room.isActive
+                          ? Icons.check_circle_outline
+                          : Icons.cancel_outlined,
+                      color:
+                          room.isActive ? AppColors.secondary : AppColors.error,
                     ),
                     if (room.avgRating > 0)
                       _InfoChip(
@@ -233,7 +259,8 @@ class _RoomHero extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                 ),
-                if (room.description != null && room.description!.isNotEmpty) ...[
+                if (room.description != null &&
+                    room.description!.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(
                     room.description!,
@@ -247,9 +274,10 @@ class _RoomHero extends StatelessWidget {
                 // Action buttons
                 if (!isAdmin)
                   FilledButton.icon(
-                    onPressed: () => context.push(AppRoutes.bookingCreate.replaceFirst(':roomId', room.id)),
+                    onPressed: () => context.push(AppRoutes.bookingCreate
+                        .replaceFirst(':roomId', room.id)),
                     icon: const Icon(Icons.calendar_today_outlined),
-                    label: const Text('Pesan Sekarang'),
+                    label: Text(strings.tr('Pesan Sekarang', 'Book Now')),
                     style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(52)),
                   ),
@@ -264,52 +292,116 @@ class _RoomHero extends StatelessWidget {
 
 // ─── Overview Tab ────────────────────────────────────────────────────────────
 
-class _OverviewTab extends StatelessWidget {
+class _OverviewTab extends ConsumerWidget {
   const _OverviewTab({required this.room});
 
   final Room room;
 
   @override
-  Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final money =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+    final imagesValue = ref.watch(roomImagesProvider(room.id));
+    final strings = AppStrings.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _DetailCard(
-          title: 'Informasi Ruangan',
+          title: strings.tr('Informasi Ruangan', 'Room Information'),
           children: [
-            _DetailRow(label: 'Kapasitas', value: '${room.capacity} orang'),
-            _DetailRow(label: 'Kota', value: room.city),
-            if (room.address != null && room.address!.isNotEmpty)
-              _DetailRow(label: 'Alamat', value: room.address!),
-            _DetailRow(label: 'Tipe', value: (room.roomType ?? 'classroom').toUpperCase()),
             _DetailRow(
-              label: 'Tarif per jam',
+              label: strings.capacity,
+              value: strings.tr(
+                  '${room.capacity} orang', '${room.capacity} people'),
+            ),
+            _DetailRow(label: strings.city, value: room.city),
+            if (room.address != null && room.address!.isNotEmpty)
+              _DetailRow(label: strings.address, value: room.address!),
+            _DetailRow(
+                label: strings.type,
+                value: (room.roomType ?? 'classroom').toUpperCase()),
+            _DetailRow(
+              label: strings.tr('Tarif per jam', 'Hourly Rate'),
               value: money.format(room.hourlyRate),
             ),
             if (room.dailyRate != null)
               _DetailRow(
-                label: 'Tarif harian',
+                label: strings.tr('Tarif harian', 'Daily Rate'),
                 value: money.format(room.dailyRate),
               ),
             _DetailRow(
-              label: 'Persetujuan',
-              value: room.requiresApproval ? 'Diperlukan' : 'Tidak diperlukan',
+              label: strings.tr('Persetujuan', 'Approval'),
+              value: room.requiresApproval
+                  ? strings.tr('Diperlukan', 'Required')
+                  : strings.tr('Tidak diperlukan', 'Not required'),
             ),
             _DetailRow(
-              label: 'Minimum jam',
-              value: '${room.minimumHours} jam',
+              label: strings.tr('Minimum jam', 'Minimum Hours'),
+              value: strings.tr(
+                '${room.minimumHours} jam',
+                '${room.minimumHours} hours',
+              ),
             ),
             _DetailRow(
-              label: 'Buffer waktu',
-              value: '${room.bufferMinutes} menit',
+              label: strings.tr('Buffer waktu', 'Buffer Time'),
+              value: strings.tr(
+                '${room.bufferMinutes} menit',
+                '${room.bufferMinutes} minutes',
+              ),
             ),
             if (room.avgRating > 0)
               _DetailRow(
                 label: 'Rating',
-                value: '${room.avgRating.toStringAsFixed(1)} ★ (${room.reviewCount} ulasan)',
+                value:
+                    '${room.avgRating.toStringAsFixed(1)} ★ (${room.reviewCount} ulasan)',
               ),
           ],
+        ),
+        const SizedBox(height: 16),
+        imagesValue.when(
+          loading: () => const SizedBox(
+            height: 120,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (images) {
+            if (images.isEmpty) return const SizedBox.shrink();
+            return _DetailCard(
+              title: strings.roomImages,
+              children: [
+                SizedBox(
+                  height: 120,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: images.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) => InkWell(
+                      onTap: () => showImagePreview(context, images[index]),
+                      borderRadius: BorderRadius.circular(14),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.network(
+                          images[index],
+                          width: 150,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 150,
+                            height: 120,
+                            color: AppColors.primaryContainer,
+                            child: const Icon(
+                              Icons.image_not_supported_outlined,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -327,22 +419,26 @@ class _FacilitiesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final facilitiesValue = ref.watch(roomFacilitiesProvider(roomId));
+    final strings = AppStrings.of(context);
 
     return facilitiesValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(
           child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('Gagal memuat: $error'))),
+              child: Text(
+                '${strings.tr('Gagal memuat', 'Failed to load')}: $error',
+              ))),
       data: (facilities) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _DetailCard(
-            title: 'Fasilitas Ruangan',
+            title: strings.tr('Fasilitas Ruangan', 'Room Facilities'),
             trailing: isAdmin
                 ? TextButton.icon(
                     onPressed: () async {
-                      final edited = await _editFacilitiesDialog(context, facilities);
+                      final edited =
+                          await _editFacilitiesDialog(context, facilities);
                       if (edited == null) return;
                       await ref
                           .read(roomsRepositoryProvider)
@@ -350,7 +446,7 @@ class _FacilitiesTab extends ConsumerWidget {
                       ref.invalidate(roomFacilitiesProvider(roomId));
                     },
                     icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Edit'),
+                    label: Text(strings.edit),
                   )
                 : null,
             children: [
@@ -359,8 +455,14 @@ class _FacilitiesTab extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     isAdmin
-                        ? 'Belum ada fasilitas. Tekan Edit untuk menambahkan.'
-                        : 'Fasilitas belum tersedia.',
+                        ? strings.tr(
+                            'Belum ada fasilitas. Tekan Edit untuk menambahkan.',
+                            'No facilities yet. Tap Edit to add them.',
+                          )
+                        : strings.tr(
+                            'Fasilitas belum tersedia.',
+                            'Facilities are not available yet.',
+                          ),
                     style: const TextStyle(color: AppColors.onSurfaceVariant),
                   ),
                 )
@@ -368,9 +470,8 @@ class _FacilitiesTab extends ConsumerWidget {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: facilities
-                      .map((tag) => _FacilityChip(tag: tag))
-                      .toList(),
+                  children:
+                      facilities.map((tag) => _FacilityChip(tag: tag)).toList(),
                 ),
             ],
           ),
@@ -381,6 +482,7 @@ class _FacilitiesTab extends ConsumerWidget {
 
   Future<List<String>?> _editFacilitiesDialog(
       BuildContext context, List<String> existing) async {
+    final strings = AppStrings.of(context);
     const options = <String, String>{
       'wifi': 'WiFi',
       'ac': 'AC',
@@ -413,7 +515,7 @@ class _FacilitiesTab extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Edit Fasilitas',
+              Text(strings.tr('Edit Fasilitas', 'Edit Facilities'),
                   style: Theme.of(ctx)
                       .textTheme
                       .titleLarge
@@ -429,7 +531,9 @@ class _FacilitiesTab extends ConsumerWidget {
                     avatar: Icon(
                       meta?.icon ?? Icons.check,
                       size: 16,
-                      color: isSelected ? Colors.white : AppColors.onSurfaceVariant,
+                      color: isSelected
+                          ? Colors.white
+                          : AppColors.onSurfaceVariant,
                     ),
                     label: Text(e.value),
                     selected: isSelected,
@@ -451,8 +555,9 @@ class _FacilitiesTab extends ConsumerWidget {
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx, selected.toList()),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                child: const Text('Simpan'),
+                style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52)),
+                child: Text(strings.save),
               ),
             ],
           ),
@@ -489,10 +594,8 @@ class _FacilityChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: AppColors.primary, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -502,7 +605,15 @@ class _FacilityChip extends StatelessWidget {
 
 // ─── Schedule Tab ────────────────────────────────────────────────────────────
 
-const _kDayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const _kDayNames = [
+  'Minggu',
+  'Senin',
+  'Selasa',
+  'Rabu',
+  'Kamis',
+  'Jumat',
+  'Sabtu'
+];
 
 class _ScheduleTab extends ConsumerWidget {
   const _ScheduleTab({required this.roomId, required this.isAdmin});
@@ -513,8 +624,10 @@ class _ScheduleTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleValue = ref.watch(roomSchedulesProvider(roomId));
+    final strings = AppStrings.of(context);
     // Provide an empty list while loading bookings, or handle errors silently for the calendar
-    final bookingsValue = ref.watch(roomBookingsProvider(roomId)).valueOrNull ?? [];
+    final bookingsValue =
+        ref.watch(roomBookingsProvider(roomId)).valueOrNull ?? [];
 
     return scheduleValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -523,7 +636,7 @@ class _ScheduleTab extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _DetailCard(
-            title: 'Ketersediaan Jadwal',
+            title: strings.tr('Ketersediaan Jadwal', 'Schedule Availability'),
             children: [
               TableCalendar(
                 firstDay: DateTime.now(),
@@ -537,13 +650,14 @@ class _ScheduleTab extends ConsumerWidget {
                   markerBuilder: (context, date, events) {
                     // Cek apakah tanggal ini ada booking yang aktif
                     final isBooked = bookingsValue.any((b) {
-                      if (b.status == 'cancelled' || b.status == 'rejected') return false;
+                      if (b.status == 'cancelled' || b.status == 'rejected')
+                        return false;
                       final bDate = b.bookingDate;
                       return bDate.year == date.year &&
                           bDate.month == date.month &&
                           bDate.day == date.day;
                     });
-                    
+
                     if (isBooked) {
                       return Positioned(
                         bottom: 4,
@@ -562,18 +676,24 @@ class _ScheduleTab extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.circle, size: 10, color: AppColors.error),
-                  SizedBox(width: 8),
-                  Text('Terdapat pesanan pada tanggal ini', style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+                  const Icon(Icons.circle, size: 10, color: AppColors.error),
+                  const SizedBox(width: 8),
+                  Text(
+                      strings.tr(
+                        'Terdapat pesanan pada tanggal ini',
+                        'There is a booking on this date',
+                      ),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.onSurfaceVariant)),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 16),
           _DetailCard(
-            title: 'Jadwal Operasional',
+            title: strings.tr('Jadwal Operasional', 'Operating Schedule'),
             trailing: isAdmin
                 ? TextButton.icon(
                     onPressed: () async {
@@ -585,7 +705,7 @@ class _ScheduleTab extends ConsumerWidget {
                       ref.invalidate(roomSchedulesProvider(roomId));
                     },
                     icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Edit'),
+                    label: Text(strings.edit),
                   )
                 : null,
             children: [
@@ -594,8 +714,14 @@ class _ScheduleTab extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     isAdmin
-                        ? 'Belum ada jadwal. Tekan Edit untuk menambahkan.'
-                        : 'Jadwal belum tersedia.',
+                        ? strings.tr(
+                            'Belum ada jadwal. Tekan Edit untuk menambahkan.',
+                            'No schedule yet. Tap Edit to add one.',
+                          )
+                        : strings.tr(
+                            'Jadwal belum tersedia.',
+                            'Schedule is not available yet.',
+                          ),
                     style: const TextStyle(color: AppColors.onSurfaceVariant),
                   ),
                 )
@@ -613,6 +739,7 @@ class _ScheduleTab extends ConsumerWidget {
     BuildContext context,
     List<Map<String, dynamic>> existing,
   ) async {
+    final strings = AppStrings.of(context);
     final controller = TextEditingController(
       text: existing.isEmpty
           ? '1,08:00,17:00,false'
@@ -639,14 +766,17 @@ class _ScheduleTab extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Edit Jadwal',
+            Text(strings.tr('Edit Jadwal', 'Edit Schedule'),
                 style: Theme.of(sheetContext)
                     .textTheme
                     .titleLarge
                     ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'Format per baris: hari(0=Min,1=Sen,...),jam_buka,jam_tutup,tutup(true/false)',
+              strings.tr(
+                'Format per baris: hari(0=Min,1=Sen,...),jam_buka,jam_tutup,tutup(true/false)',
+                'Format per line: day(0=Sun,1=Mon,...),open_time,close_time,closed(true/false)',
+              ),
               style: Theme.of(sheetContext)
                   .textTheme
                   .bodySmall
@@ -656,8 +786,11 @@ class _ScheduleTab extends ConsumerWidget {
             TextField(
               controller: controller,
               maxLines: 8,
-              decoration: const InputDecoration(
-                hintText: 'Contoh:\n1,08:00,17:00,false\n2,08:00,17:00,false',
+              decoration: InputDecoration(
+                hintText: strings.tr(
+                  'Contoh:\n1,08:00,17:00,false\n2,08:00,17:00,false',
+                  'Example:\n1,08:00,17:00,false\n2,08:00,17:00,false',
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -667,20 +800,20 @@ class _ScheduleTab extends ConsumerWidget {
                     .split('\n')
                     .where((line) => line.trim().isNotEmpty)
                     .map((line) {
-                      final parts = line.split(',');
-                      return <String, dynamic>{
-                        'day_of_week': int.tryParse(parts[0].trim()) ?? 1,
-                        'open_time': parts.length > 1 ? parts[1].trim() : '08:00',
-                        'close_time': parts.length > 2 ? parts[2].trim() : '17:00',
-                        'is_closed':
-                            parts.length > 3 ? parts[3].trim() == 'true' : false,
-                      };
-                    })
-                    .toList();
+                  final parts = line.split(',');
+                  return <String, dynamic>{
+                    'day_of_week': int.tryParse(parts[0].trim()) ?? 1,
+                    'open_time': parts.length > 1 ? parts[1].trim() : '08:00',
+                    'close_time': parts.length > 2 ? parts[2].trim() : '17:00',
+                    'is_closed':
+                        parts.length > 3 ? parts[3].trim() == 'true' : false,
+                  };
+                }).toList();
                 Navigator.pop(sheetContext, parsed);
               },
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-              child: const Text('Simpan'),
+              style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52)),
+              child: Text(strings.save),
             ),
           ],
         ),
@@ -726,10 +859,9 @@ class _ScheduleRow extends StatelessWidget {
 // ─── Bookings Tab ─────────────────────────────────────────────────────────────
 
 class _BookingsTab extends ConsumerWidget {
-  const _BookingsTab({required this.roomId, required this.isAdmin});
+  const _BookingsTab({required this.roomId});
 
   final String roomId;
-  final bool isAdmin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -740,11 +872,14 @@ class _BookingsTab extends ConsumerWidget {
       error: (error, _) => Center(child: Text(error.toString())),
       data: (bookings) {
         if (bookings.isEmpty) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(32),
+              padding: const EdgeInsets.all(32),
               child: Text(
-                'Belum ada booking untuk ruangan ini.',
+                AppStrings.of(context).tr(
+                  'Belum ada booking untuk ruangan ini.',
+                  'No bookings for this room yet.',
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -758,18 +893,6 @@ class _BookingsTab extends ConsumerWidget {
             final booking = bookings[index];
             return _BookingRow(
               booking: booking,
-              isAdmin: isAdmin,
-              onConfirm: () async {
-                await ref.read(bookingRepositoryProvider).updateBooking(
-                  booking.id,
-                  {'status': 'confirmed'},
-                );
-                ref.invalidate(roomBookingsProvider(roomId));
-              },
-              onCancel: () async {
-                await ref.read(bookingRepositoryProvider).cancelBooking(booking.id);
-                ref.invalidate(roomBookingsProvider(roomId));
-              },
             );
           },
         );
@@ -779,17 +902,9 @@ class _BookingsTab extends ConsumerWidget {
 }
 
 class _BookingRow extends StatelessWidget {
-  const _BookingRow({
-    required this.booking,
-    required this.isAdmin,
-    required this.onConfirm,
-    required this.onCancel,
-  });
+  const _BookingRow({required this.booking});
 
   final Booking booking;
-  final bool isAdmin;
-  final VoidCallback onConfirm;
-  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -822,7 +937,8 @@ class _BookingRow extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '${DateFormat('dd MMM yyyy').format(booking.bookingDate)} • ${booking.startTime} - ${booking.endTime}',
-                        style: const TextStyle(color: AppColors.onSurfaceVariant),
+                        style:
+                            const TextStyle(color: AppColors.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -846,26 +962,12 @@ class _BookingRow extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0)
+              NumberFormat.currency(
+                      locale: 'id_ID', symbol: 'Rp', decimalDigits: 0)
                   .format(booking.finalPrice),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700, color: AppColors.primary),
             ),
-            if (isAdmin) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  FilledButton.tonal(
-                    onPressed: onConfirm,
-                    child: const Text('Konfirmasi'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(onPressed: onCancel, child: const Text('Batalkan')),
-                ],
-              ),
-            ],
           ],
         ),
       ),
@@ -895,7 +997,8 @@ class _DetailCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.outlineVariant),
         boxShadow: const [
-          BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
         ],
       ),
       padding: const EdgeInsets.all(16),
@@ -1011,7 +1114,8 @@ class _TabHeader extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: tabBar,
