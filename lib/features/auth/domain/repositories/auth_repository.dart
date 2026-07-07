@@ -22,6 +22,11 @@ abstract interface class AuthRepository {
     String? agencyDescription,
   });
   Future<Either<Failure, Unit>> resetPassword(String email);
+  Future<Either<Failure, AppUser>> updateProfile({
+    required String fullName,
+    String? phone,
+    String? avatarUrl,
+  });
   Future<Either<Failure, Unit>> logout();
 }
 
@@ -30,7 +35,7 @@ enum RegistrationType {
   agencyAdmin;
 
   String get metadataValue => switch (this) {
-      RegistrationType.user => 'user',
-      RegistrationType.agencyAdmin => 'agency_admin',
+        RegistrationType.user => 'user',
+        RegistrationType.agencyAdmin => 'agency_admin',
       };
 }
