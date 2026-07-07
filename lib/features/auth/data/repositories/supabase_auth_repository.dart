@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -33,10 +35,12 @@ class SupabaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     try {
-      final response = await _service.requireClient.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
-      );
+      final response = await _service.requireClient.auth
+          .signInWithPassword(
+            email: email.trim(),
+            password: password,
+          )
+          .timeout(const Duration(seconds: 8));
       final user = response.user;
       if (user == null) {
         return left(const AuthFailure('Login failed. Please try again.'));
@@ -46,6 +50,12 @@ class SupabaseAuthRepository implements AuthRepository {
       return right(profile);
     } on AuthException catch (error) {
       return left(AuthFailure(error.message, code: error.statusCode));
+    } on TimeoutException {
+      return left(
+        const NetworkFailure(
+          'Login terlalu lama merespons. Periksa koneksi lalu coba lagi.',
+        ),
+      );
     } catch (error) {
       return left(UnknownFailure(error.toString()));
     }
@@ -76,7 +86,8 @@ class SupabaseAuthRepository implements AuthRepository {
           if (agencyPhone != null) 'agency_phone': agencyPhone.trim(),
           if (agencyAddress != null) 'agency_address': agencyAddress.trim(),
           if (agencyCity != null) 'agency_city': agencyCity.trim(),
-          if (agencyDescription != null) 'agency_description': agencyDescription.trim(),
+          if (agencyDescription != null)
+            'agency_description': agencyDescription.trim(),
         },
       );
       final user = response.user;
@@ -125,6 +136,100 @@ class SupabaseAuthRepository implements AuthRepository {
       return left(AuthFailure(error.message, code: error.statusCode));
     } catch (error) {
       return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AppUser>> updateProfile({
+    required String fullName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    try {
+      final userId = _service.requireClient.auth.currentUser?.id;
+      if (userId == null) {
+        return left(
+            const AuthFailure('Sesi tidak ditemukan. Silakan login ulang.'));
+      }
+
+      final updateData = <String, dynamic>{
+        'full_name': fullName.trim(),
+        if (phone != null) 'phone': phone.trim().isEmpty ? null : phone.trim(),
+        if (avatarUrl != null) 'avatar_url': avatarUrl.trim(),
+      };
+      final updatedRow = await _updateOwnProfile(updateData);
+      _ensureAccountCanAccess(updatedRow);
+      final agency = await _loadUserAgency(updatedRow);
+
+      await _syncAuthProfileMetadata(
+        fullName: fullName,
+        avatarUrl: avatarUrl,
+      );
+
+      return right(AppUserDto.fromJson({
+        ...updatedRow,
+        'agency_id': agency?['id'],
+        'agency_status': agency?['approval_status'],
+        'agency_is_active': agency?['is_active'],
+      }));
+    } on AuthException catch (error) {
+      return left(AuthFailure(error.message, code: error.statusCode));
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
+
+  Future<Map<String, dynamic>> _updateOwnProfile(
+    Map<String, dynamic> updateData,
+  ) async {
+    try {
+      return await _service.requireClient.rpc(
+        'update_own_profile',
+        params: {
+          'p_full_name': updateData['full_name'],
+          'p_phone':
+              updateData.containsKey('phone') ? updateData['phone'] : null,
+          'p_avatar_url': updateData['avatar_url'],
+        },
+      ) as Map<String, dynamic>;
+    } catch (error) {
+      final message = error.toString().toLowerCase();
+      if (!message.contains('update_own_profile') &&
+          !message.contains('function') &&
+          !message.contains('rpc')) {
+        rethrow;
+      }
+
+      final userId = _service.requireClient.auth.currentUser?.id;
+      return await _service.requireClient
+          .from(SupabaseTables.users)
+          .update(updateData)
+          .eq('id', userId!)
+          .select(
+            'id,email,full_name,phone,avatar_url,role,is_verified,'
+            'account_status,deleted_at',
+          )
+          .single();
+    }
+  }
+
+  Future<void> _syncAuthProfileMetadata({
+    required String fullName,
+    String? avatarUrl,
+  }) async {
+    try {
+      await _service.requireClient.auth.updateUser(
+        UserAttributes(
+          data: {
+            'full_name': fullName.trim(),
+            if (avatarUrl != null) 'avatar_url': avatarUrl.trim(),
+          },
+        ),
+      );
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('Auth metadata sync skipped: $error');
+      }
     }
   }
 
@@ -266,7 +371,8 @@ class SupabaseAuthRepository implements AuthRepository {
         if (agencyPhone != null) 'p_agency_phone': agencyPhone.trim(),
         if (agencyAddress != null) 'p_agency_address': agencyAddress.trim(),
         if (agencyCity != null) 'p_agency_city': agencyCity.trim(),
-        if (agencyDescription != null) 'p_agency_description': agencyDescription.trim(),
+        if (agencyDescription != null)
+          'p_agency_description': agencyDescription.trim(),
       },
     );
   }
