@@ -33,11 +33,15 @@ $$;
 
 create or replace function public.current_user_role()
 returns text language sql stable security definer set search_path = public as $$
-  select role
-  from public.users
+  select nullif(
+    coalesce(
+      auth.users.raw_app_meta_data ->> 'role',
+      auth.users.raw_user_meta_data ->> 'role'
+    ),
+    ''
+  )
+  from auth.users
   where id = auth.uid()
-    and deleted_at is null
-    and account_status in ('active','pending')
 $$;
 
 drop policy if exists agencies_super_admin_update on public.agencies;
@@ -53,8 +57,8 @@ for update using (
 )
 with check (
   id = auth.uid()
-  and role = (select role from public.users where id = auth.uid())
-  and account_status = (select account_status from public.users where id = auth.uid())
+  and role = public.current_user_role()
+  and account_status in ('active','pending')
   and deleted_at is null
 );
 
