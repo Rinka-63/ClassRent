@@ -10,7 +10,6 @@ import '../../../../../core/widgets/error_card.dart';
 import '../../../../../shared/presentation/widgets/admin_nav_bar.dart';
 import '../../../booking/domain/entities/booking.dart';
 import '../../../booking/presentation/providers/booking_admin_providers.dart';
-import '../../../payments/data/services/midtrans_service.dart';
 import '../../../rooms/domain/entities/room.dart';
 import '../providers/admin_overview_providers.dart';
 
@@ -23,7 +22,7 @@ class BookingManagementScreen extends ConsumerWidget {
     final roomsValue = ref.watch(adminRoomsProvider);
 
     return AppScaffold(
-      title: 'Booking Management',
+      title: 'Manajemen Pesanan',
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.profile),
@@ -34,7 +33,8 @@ class BookingManagementScreen extends ConsumerWidget {
           icon: const Icon(Icons.analytics_outlined),
         ),
       ],
-      bottomNavigationBar: const AdminNavBar(currentPath: AppRoutes.bookingManagement),
+      bottomNavigationBar:
+          const AdminNavBar(currentPath: AppRoutes.bookingManagement),
       body: bookingsValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Padding(
@@ -47,44 +47,45 @@ class BookingManagementScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               Text(
-                'Manage and monitor all room reservations across your agency.',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                'Kelola dan pantau semua pesanan ruangan di seluruh agensi Anda.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.onSurfaceVariant,
                     ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               const _SearchBar(),
+              const SizedBox(height: 12),
+              _CompactStatsGrid(stats: stats),
               const SizedBox(height: 16),
-              _MetricCard(label: 'TOTAL PENDING', value: stats.pending.toString(), accent: AppColors.primary),
-              const SizedBox(height: 12),
-              _MetricCard(label: 'ACTIVE BOOKINGS', value: stats.active.toString(), accent: AppColors.secondary),
-              const SizedBox(height: 12),
-              _MetricCard(label: 'REVENUE TODAY', value: stats.revenueLabel, accent: AppColors.primaryContainer),
-              const SizedBox(height: 12),
-              _MetricCard(label: 'ROOMS OCCUPIED', value: stats.occupiedLabel, accent: AppColors.tertiary),
-              const SizedBox(height: 24),
               // --- Live Room Status Section ---
               Text(
-                'Live Room Status',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                'Status Ruangan Langsung',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               roomsValue.when(
-                data: (rooms) => _LiveRoomStatusList(rooms: rooms, bookings: bookings),
+                data: (rooms) =>
+                    _LiveRoomStatusList(rooms: rooms, bookings: bookings),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Text('Error loading rooms: $e'),
+                error: (e, _) => Text('Gagal memuat ruangan: $e'),
               ),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Recent Bookings',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    'Pesanan Terbaru',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   TextButton(
                     onPressed: () => context.push(AppRoutes.adminCalendar),
-                    child: const Text('Calendar'),
+                    child: const Text('Kalender'),
                   ),
                 ],
               ),
@@ -103,7 +104,7 @@ class BookingManagementScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/admin/scanner'),
         icon: const Icon(Icons.qr_code_scanner),
-        label: const Text('Scan QR'),
+        label: const Text('Pindai QR'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
@@ -120,15 +121,34 @@ class _BookingStats {
   });
 
   factory _BookingStats.fromBookings(List<Booking> bookings) {
-    final pending = bookings.where((booking) => booking.status.toLowerCase().contains('pending')).length;
-    final active = bookings.where((booking) => booking.status.toLowerCase().contains('confirm') || booking.status.toLowerCase().contains('check')).length;
-    final revenue = bookings.fold<double>(0, (sum, booking) => sum + booking.finalPrice);
-    final occupied = bookings.isEmpty ? 0 : (active / bookings.length * 100).round();
+    final pending = bookings
+        .where((booking) => booking.status.toLowerCase().contains('pending'))
+        .length;
+    final active = bookings
+        .where((booking) =>
+            booking.status.toLowerCase().contains('confirm') ||
+            booking.status.toLowerCase().contains('check'))
+        .length;
+
+    final validStatuses = {
+      'confirmed',
+      'completed',
+      'checked_in',
+      'checked_out'
+    };
+    final revenue = bookings
+        .where((b) => validStatuses.contains(b.status.toLowerCase()))
+        .fold<double>(0, (sum, b) => sum + b.finalPrice);
+
+    final occupied =
+        bookings.isEmpty ? 0 : (active / bookings.length * 100).round();
 
     return _BookingStats(
       pending: pending,
       active: active,
-      revenueLabel: NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0).format(revenue),
+      revenueLabel:
+          NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0)
+              .format(revenue),
       occupiedLabel: '$occupied%',
     );
   }
@@ -149,7 +169,7 @@ class _SearchBar extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: TextField(
           decoration: InputDecoration(
-            hintText: 'Search bookings...',
+            hintText: 'Cari pesanan...',
             prefixIcon: Icon(Icons.search),
             border: InputBorder.none,
           ),
@@ -159,42 +179,77 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
+class _CompactStatsGrid extends StatelessWidget {
+  const _CompactStatsGrid({required this.stats});
+
+  final _BookingStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 2.4,
+      children: [
+        _CompactStat(
+            label: 'Menunggu',
+            value: '${stats.pending}',
+            color: AppColors.primary),
+        _CompactStat(
+            label: 'Aktif', value: '${stats.active}', color: AppColors.success),
+        _CompactStat(
+            label: 'Pendapatan',
+            value: stats.revenueLabel,
+            color: AppColors.accent),
+        _CompactStat(
+            label: 'Terpakai',
+            value: stats.occupiedLabel,
+            color: AppColors.tertiary),
+      ],
+    );
+  }
+}
+
+class _CompactStat extends StatelessWidget {
+  const _CompactStat({
     required this.label,
     required this.value,
-    required this.accent,
+    required this.color,
   });
 
   final String label;
   final String value;
-  final Color accent;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: AppColors.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
-        ),
+                  )),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              )),
+        ],
       ),
     );
   }
@@ -207,6 +262,9 @@ class _BookingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userName = (booking.userName?.trim().isNotEmpty ?? false)
+        ? booking.userName!.trim()
+        : 'Pengguna';
     final statusColor = switch (booking.status.toLowerCase()) {
       'confirmed' => AppColors.secondary,
       'pending_payment' || 'pending_approval' => AppColors.tertiary,
@@ -227,17 +285,19 @@ class _BookingCard extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                    child: Text((booking.userName ?? 'U').characters.first.toUpperCase()),
+                    child: Text(userName.characters.first.toUpperCase()),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(booking.userName ?? 'User', style: Theme.of(context).textTheme.titleMedium),
+                        Text(userName,
+                            style: Theme.of(context).textTheme.titleMedium),
                         Text(
                           booking.roomName ?? 'Ruangan',
-                          style: const TextStyle(color: AppColors.onSurfaceVariant),
+                          style: const TextStyle(
+                              color: AppColors.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -251,94 +311,12 @@ class _BookingCard extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (booking.status == 'confirmed') ...[
-                    OutlinedButton.icon(
-                      onPressed: () => _handleCancelAndRefund(context, ref, booking),
-                      icon: const Icon(Icons.money_off),
-                      label: const Text('Batalkan & Refund'),
-                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                    ),
-                  ] else if (booking.status == 'pending_payment') ...[
-                    OutlinedButton.icon(
-                      onPressed: () => _handleReject(context, ref, booking),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Tolak Pesanan'),
-                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                    ),
-                  ],
-                ],
-              ),
+              const SizedBox.shrink(),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _handleReject(BuildContext context, WidgetRef ref, Booking booking) async {
-    try {
-      await ref.read(bookingRepositoryProvider).updateBooking(booking.id, {'status': 'rejected'});
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan ditolak!')));
-        ref.invalidate(agencyBookingsProvider);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
-  }
-
-  Future<void> _handleCancelAndRefund(BuildContext context, WidgetRef ref, Booking booking) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Batalkan & Refund?'),
-        content: const Text('Aksi ini akan membatalkan pesanan dan secara otomatis memproses pengembalian dana (refund) melalui Midtrans.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Kembali')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Ya, Batalkan'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      // Import midtrans service dynamically or make sure it's imported at the top
-      // Wait, we need to ensure MidtransService is imported
-      final midtrans = MidtransService();
-      await midtrans.refundTransaction(
-        orderId: 'CLASSRENT-${booking.id}',
-        reason: 'Dibatalkan oleh Admin',
-      );
-
-      await ref.read(bookingRepositoryProvider).updateBooking(booking.id, {'status': 'cancelled'});
-      
-      if (context.mounted) {
-        Navigator.pop(context); // hide loading
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan dibatalkan & Refund berhasil diproses!')));
-        ref.invalidate(agencyBookingsProvider);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // hide loading
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal melakukan refund: $e')));
-      }
-    }
   }
 }
 
@@ -356,7 +334,8 @@ class _Chip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      child: Text(label,
+          style: TextStyle(color: color, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -369,7 +348,8 @@ class _EmptyState extends StatelessWidget {
     return const Card(
       child: Padding(
         padding: EdgeInsets.all(24),
-        child: Text('No bookings yet. Bookings will appear here once users start reserving rooms.'),
+        child: Text(
+            'No bookings yet. Bookings will appear here once users start reserving rooms.'),
       ),
     );
   }
@@ -386,12 +366,14 @@ class _LiveRoomStatusList extends StatelessWidget {
     if (rooms.isEmpty) return const Text('Belum ada ruangan.');
 
     // Cek booking yang statusnya checked_in
-    final checkedInBookings = bookings.where((b) => b.status == 'checked_in').toList();
+    final checkedInBookings =
+        bookings.where((b) => b.status == 'checked_in').toList();
 
     return Column(
       children: rooms.map<Widget>((room) {
-        final activeBooking = checkedInBookings.where((b) => b.roomId == room.id).firstOrNull;
-        
+        final activeBooking =
+            checkedInBookings.where((b) => b.roomId == room.id).firstOrNull;
+
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
@@ -405,20 +387,26 @@ class _LiveRoomStatusList extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Icon(
                         Icons.meeting_room,
-                        color: activeBooking != null ? AppColors.error : Colors.green,
+                        color: activeBooking != null
+                            ? AppColors.error
+                            : Colors.green,
                         size: 32,
                       ),
                     ),
                   )
                 : Icon(
                     Icons.meeting_room,
-                    color: activeBooking != null ? AppColors.error : Colors.green,
+                    color:
+                        activeBooking != null ? AppColors.error : Colors.green,
                     size: 32,
                   ),
-            title: Text(room.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+            title: Text(room.name,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
             subtitle: activeBooking != null
-                ? Text('🔴 Sedang Digunakan oleh ${activeBooking.userName ?? "User"}')
-                : const Text('🟢 Tersedia', style: TextStyle(color: Colors.green)),
+                ? Text(
+                    '🔴 Sedang digunakan oleh ${activeBooking.userName ?? "Pengguna"}')
+                : const Text('🟢 Tersedia',
+                    style: TextStyle(color: Colors.green)),
           ),
         );
       }).toList(),
