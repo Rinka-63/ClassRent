@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_routes.dart';
+import '../../../core/l10n/app_strings.dart';
 
 class AdminNavBar extends StatelessWidget {
   const AdminNavBar({required this.currentPath, super.key});
@@ -10,12 +11,15 @@ class AdminNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final items = <_NavItem>[
-      const _NavItem(AppRoutes.admin, Icons.home_outlined, 'Home'),
-      const _NavItem(AppRoutes.roomManagement, Icons.meeting_room_outlined, 'Rooms'),
-      const _NavItem(AppRoutes.bookingManagement, Icons.calendar_month_outlined, 'Booking'),
-      const _NavItem(AppRoutes.adminHistory, Icons.history_outlined, 'History'),
-      const _NavItem(AppRoutes.profile, Icons.person_outline, 'Profile'),
+      _NavItem(AppRoutes.admin, Icons.home_outlined, strings.home),
+      _NavItem(
+          AppRoutes.roomManagement, Icons.meeting_room_outlined, strings.rooms),
+      _NavItem(AppRoutes.bookingManagement, Icons.calendar_month_outlined,
+          strings.bookings),
+      _NavItem(AppRoutes.adminHistory, Icons.history_outlined, strings.history),
+      _NavItem(AppRoutes.profile, Icons.person_outline, strings.profile),
     ];
     final index = items.indexWhere((item) => item.path == currentPath);
 
