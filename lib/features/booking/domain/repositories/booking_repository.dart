@@ -9,7 +9,9 @@ abstract interface class BookingRepository {
   Future<Either<Failure, List<Booking>>> getBookingsForUser(String userId);
   Future<Either<Failure, Booking>> getBookingById(String id);
   Future<Either<Failure, Booking>> createBooking(Map<String, dynamic> payload);
-  Future<Either<Failure, Booking>> updateBooking(String id, Map<String, dynamic> payload);
+  Future<Either<Failure, Booking>> updateBooking(
+      String id, Map<String, dynamic> payload);
   Future<Either<Failure, Unit>> cancelBooking(String id);
   Future<Either<Failure, Unit>> deleteBooking(String id);
+  Future<Either<Failure, Unit>> expirePastBookings();
 }
