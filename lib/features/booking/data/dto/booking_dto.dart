@@ -14,17 +14,30 @@ class BookingDto extends Booking {
     super.facilityId,
     super.userName,
     super.roomName,
+    super.createdAt,
   });
 
   factory BookingDto.fromJson(Map<String, dynamic> json) {
     // Extract related names if joined
     String? parsedUserName;
-    if (json['users'] != null) {
-      parsedUserName = json['users']['full_name'] as String?;
+    final user = json['users'];
+    if (user is Map<String, dynamic>) {
+      parsedUserName = user['full_name'] as String?;
+    } else if (user is List && user.isNotEmpty) {
+      parsedUserName =
+          (user.first as Map<String, dynamic>)['full_name'] as String?;
     }
     String? parsedRoomName;
-    if (json['rooms'] != null) {
-      parsedRoomName = json['rooms']['name'] as String?;
+    final room = json['rooms'];
+    if (room is Map<String, dynamic>) {
+      parsedRoomName = room['name'] as String?;
+    } else if (room is List && room.isNotEmpty) {
+      parsedRoomName = (room.first as Map<String, dynamic>)['name'] as String?;
+    }
+
+    DateTime? parsedCreatedAt;
+    if (json['created_at'] != null) {
+      parsedCreatedAt = DateTime.parse(json['created_at'].toString());
     }
 
     return BookingDto(
@@ -40,6 +53,7 @@ class BookingDto extends Booking {
       status: json['status'] as String,
       userName: parsedUserName,
       roomName: parsedRoomName,
+      createdAt: parsedCreatedAt,
     );
   }
 }
