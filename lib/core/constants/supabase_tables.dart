@@ -9,10 +9,12 @@ class SupabaseTables {
   static const roomImages = 'room_images';
   static const bookings = 'bookings';
   static const payments = 'payments';
-  static const coupons = 'coupons';
+  static const agencyWithdrawals = 'agency_withdrawals';
+
   static const reviews = 'reviews';
   static const notifications = 'notifications';
   static const userFavorites = 'user_favorites';
   static const supportTickets = 'support_tickets';
   static const ticketMessages = 'ticket_messages';
+  static const systemSettings = 'system_settings';
 }
