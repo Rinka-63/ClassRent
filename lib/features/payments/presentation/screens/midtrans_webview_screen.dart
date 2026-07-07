@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/supabase/supabase_client_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../booking/presentation/providers/booking_admin_providers.dart';
 
 class MidtransWebViewScreen extends ConsumerStatefulWidget {
@@ -18,7 +21,8 @@ class MidtransWebViewScreen extends ConsumerStatefulWidget {
   final String bookingId;
 
   @override
-  ConsumerState<MidtransWebViewScreen> createState() => _MidtransWebViewScreenState();
+  ConsumerState<MidtransWebViewScreen> createState() =>
+      _MidtransWebViewScreenState();
 }
 
 class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
@@ -71,6 +75,7 @@ class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
         widget.bookingId,
         {'status': 'confirmed'},
       );
+      await _createPaymentSuccessNotification();
     } catch (_) {}
 
     if (!mounted) return;
@@ -81,7 +86,9 @@ class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
           children: [
             Icon(Icons.check_circle, color: Colors.white),
             SizedBox(width: 12),
-            Expanded(child: Text('🎉 Pembayaran berhasil! Booking kamu sudah dikonfirmasi.')),
+            Expanded(
+                child: Text(
+                    '🎉 Pembayaran berhasil! Booking kamu sudah dikonfirmasi.')),
           ],
         ),
         backgroundColor: Colors.green.shade600,
@@ -111,11 +118,39 @@ class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
     );
   }
 
+  Future<void> _createPaymentSuccessNotification() async {
+    final client = ref.read(supabaseClientProvider);
+    final user = ref.read(currentUserProvider);
+    if (client == null || user == null) return;
+
+    final existing = await client
+        .from('notifications')
+        .select('id')
+        .eq('receiver_id', user.id)
+        .eq('type', 'payment_success')
+        .eq('reference_id', widget.bookingId)
+        .maybeSingle();
+    if (existing != null) return;
+
+    await client.from('notifications').insert({
+      'receiver_id': user.id,
+      'user_id': user.id,
+      'sender_id': null,
+      'title': 'Pembayaran berhasil',
+      'body': 'Pembayaran berhasil. Booking kamu sudah dikonfirmasi.',
+      'type': 'payment_success',
+      'reference_id': widget.bookingId,
+      'data': {'reference_id': widget.bookingId},
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pembayaran Midtrans'),
+        title: Text(
+          AppStrings.of(context).tr('Pembayaran Midtrans', 'Midtrans Payment'),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => _showExitDialog(context),
@@ -138,7 +173,9 @@ class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
           _onPaymentSuccess();
         },
         icon: const Icon(Icons.qr_code_scanner),
-        label: const Text('Simulasi Bayar QR'),
+        label: Text(
+          AppStrings.of(context).tr('Simulasi Bayar QR', 'Simulate QR Payment'),
+        ),
         backgroundColor: AppColors.secondary,
         foregroundColor: Colors.white,
       ),
@@ -146,16 +183,22 @@ class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
   }
 
   void _showExitDialog(BuildContext context) {
+    final strings = AppStrings.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Batalkan Pembayaran?'),
-        content: const Text('Apakah Anda yakin ingin meninggalkan halaman pembayaran? Transaksi Anda belum selesai.'),
+        title: Text(strings.tr('Batalkan Pembayaran?', 'Cancel Payment?')),
+        content: Text(
+          strings.tr(
+            'Apakah Anda yakin ingin meninggalkan halaman pembayaran? Transaksi Anda belum selesai.',
+            'Are you sure you want to leave the payment page? Your transaction is not complete yet.',
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Lanjutkan Bayar'),
+            child: Text(strings.tr('Lanjutkan Bayar', 'Continue Payment')),
           ),
           FilledButton(
             onPressed: () {
@@ -163,7 +206,7 @@ class _MidtransWebViewScreenState extends ConsumerState<MidtransWebViewScreen> {
               context.go(AppRoutes.bookings);
             },
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Keluar'),
+            child: Text(strings.tr('Keluar', 'Exit')),
           ),
         ],
       ),
