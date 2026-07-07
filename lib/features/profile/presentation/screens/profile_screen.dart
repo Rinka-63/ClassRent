@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/providers/app_settings_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../shared/domain/entities/app_user.dart';
 import '../../../../shared/presentation/widgets/admin_nav_bar.dart';
 import '../../../../shared/presentation/widgets/role_aware_nav_bar.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
+import '../../../notifications/presentation/widgets/notification_badge.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -17,249 +20,441 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
-    final isAdmin = user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final settings = ref.watch(appSettingsProvider);
+    final isAdmin =
+        user?.role == UserRole.admin || user?.role == UserRole.superAdmin;
+    final strings = AppStrings.of(context);
+    final unreadNotifications = ref.watch(unreadCountProvider).valueOrNull ?? 0;
 
     return AppScaffold(
-      title: isAdmin ? 'Profile' : 'Profile',
+      title: strings.profile,
       bottomNavigationBar: isAdmin
           ? const AdminNavBar(currentPath: AppRoutes.profile)
           : const RoleAwareNavBar(currentPath: AppRoutes.profile),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _ProfileCard(user: user),
-          const SizedBox(height: 16),
-          _SecurityCard(
-            user: user,
-            onPressed: () {
-              if (user?.role == UserRole.admin || user?.role == UserRole.superAdmin) {
-                context.push(AppRoutes.adminHistory);
-              } else {
-                context.push(AppRoutes.support);
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-          _SectionTitle(text: isAdmin ? 'Admin Tools' : 'Account'),
-          const SizedBox(height: 12),
-          if (isAdmin) ...[
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(authControllerProvider.notifier).refreshCurrentUser();
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _ProfileHeader(user: user),
+            const SizedBox(height: 20),
+            _SectionTitle(text: strings.generalSettings),
             _SettingsTile(
-              icon: Icons.meeting_room_outlined,
-              title: 'Room Management',
-              subtitle: 'CRUD rooms, facilities, and schedules',
-              onTap: () => context.push(AppRoutes.roomManagement),
+              icon: Icons.language_outlined,
+              title: strings.appLanguage,
+              onTap: () => _showLanguageSheet(
+                context,
+                ref,
+                selectedLanguageCode: settings.locale.languageCode,
+              ),
             ),
-            _SettingsTile(
-              icon: Icons.calendar_month_outlined,
-              title: 'Booking Management',
-              subtitle: 'Monitor and confirm bookings',
-              onTap: () => context.push(AppRoutes.bookingManagement),
+            const SizedBox(height: 8),
+            if (isAdmin) ...[
+              _SectionTitle(text: strings.adminTools),
+              _SettingsTile(
+                icon: Icons.meeting_room_outlined,
+                title: strings.tr('Manajemen Ruangan', 'Room Management'),
+                onTap: () => context.push(AppRoutes.roomManagement),
+              ),
+              _SettingsTile(
+                icon: Icons.calendar_month_outlined,
+                title: strings.tr('Manajemen Pesanan', 'Booking Management'),
+                onTap: () => context.push(AppRoutes.bookingManagement),
+              ),
+              _SettingsTile(
+                icon: Icons.insights_outlined,
+                title: strings.tr('Laporan', 'Reports'),
+                onTap: () => context.push(AppRoutes.adminReports),
+              ),
+              _SettingsTile(
+                icon: Icons.business_outlined,
+                title: strings.tr('Profil Agensi', 'Agency Profile'),
+                onTap: () => context.push(AppRoutes.agencyProfile),
+              ),
+              const SizedBox(height: 8),
+            ] else ...[
+              _SectionTitle(text: strings.account),
+              _SettingsTile(
+                icon: Icons.edit_outlined,
+                title: strings.profileEdit,
+                onTap: () => _showEditProfileSheet(context, ref, user),
+              ),
+              _SettingsTile(
+                icon: Icons.favorite_border,
+                title: strings.savedRooms,
+                onTap: () => context.push(AppRoutes.favorites),
+              ),
+              const SizedBox(height: 8),
+              _SettingsTile(
+                icon: Icons.notifications_outlined,
+                title: strings.notifications,
+                badgeCount: unreadNotifications,
+                onTap: () => context.push(AppRoutes.notifications),
+              ),
+              _SettingsTile(
+                icon: Icons.support_agent_outlined,
+                title: strings.help,
+                onTap: () => context.push(AppRoutes.support),
+              ),
+              _SettingsTile(
+                icon: Icons.info_outline,
+                title: strings.about,
+                onTap: () => _showInfoDialog(
+                  context,
+                  title: strings.aboutClassRent,
+                  message: strings.tr(
+                    'ClassRent membantu pengguna menemukan, memesan, dan mengelola ruang kelas secara praktis.',
+                    'ClassRent helps users find, book, and manage classrooms easily.',
+                  ),
+                ),
+              ),
+              _SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: strings.privacyPolicy,
+                onTap: () => _showInfoDialog(
+                  context,
+                  title: strings.privacyPolicy,
+                  message: strings.tr(
+                    'Data digunakan untuk autentikasi, booking, pembayaran, dan notifikasi aplikasi.',
+                    'Data is used for authentication, bookings, payments, and app notifications.',
+                  ),
+                ),
+              ),
+              _SettingsTile(
+                icon: Icons.description_outlined,
+                title: strings.termsAndConditions,
+                onTap: () => _showInfoDialog(
+                  context,
+                  title: strings.termsAndConditions,
+                  message: strings.tr(
+                    'Pemesanan mengikuti status ruangan, persetujuan admin, dan status pembayaran yang berlaku.',
+                    'Bookings follow room availability, admin approval, and applicable payment status.',
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await ref.read(authControllerProvider.notifier).logout();
+                if (context.mounted) context.go(AppRoutes.login);
+              },
+              icon: const Icon(Icons.logout),
+              label: Text(strings.logout),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                minimumSize: const Size.fromHeight(52),
+              ),
             ),
-            _SettingsTile(
-              icon: Icons.insights_outlined,
-              title: 'Reports',
-              subtitle: 'Automatic summary and revenue insight',
-              onTap: () => context.push(AppRoutes.adminReports),
-            ),
-            _SettingsTile(
-              icon: Icons.business,
-              title: 'Agency Profile',
-              subtitle: 'Edit agency details',
-              onTap: () => context.push(AppRoutes.agencyProfile),
-            ),
-            _SettingsTile(
-              icon: Icons.history_outlined,
-              title: 'Activity History',
-              subtitle: 'Audit logs and recent admin actions',
-              onTap: () => context.push(AppRoutes.adminHistory),
-            ),
-          ] else ...[
-            _SettingsTile(
-              icon: Icons.notifications_outlined,
-              title: 'Notifications',
-              subtitle: 'Email and booking alerts',
-              onTap: () => context.push(AppRoutes.notifications),
-            ),
-            _SettingsTile(
-              icon: Icons.favorite_border,
-              title: 'Saved Rooms',
-              subtitle: 'Your favorite rooms and places',
-              onTap: () => context.push(AppRoutes.favorites),
-            ),
-            _SettingsTile(
-              icon: Icons.support_agent_outlined,
-              title: 'Support Tickets',
-              subtitle: 'Help desk and contact support',
-              onTap: () => context.push(AppRoutes.support),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                strings.appVersion,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppColors.onSurfaceVariant,
+                    ),
+              ),
             ),
           ],
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) {
-                context.go(AppRoutes.login);
-              }
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.error,
-              side: const BorderSide(color: AppColors.error),
-              minimumSize: const Size.fromHeight(54),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              'ClassRent',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+void _showInfoDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+}) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(AppStrings.of(context).closeLabel),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _showLanguageSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  required String selectedLanguageCode,
+}) async {
+  final selected = ValueNotifier<String>(selectedLanguageCode);
+
+  await showModalBottomSheet<void>(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: ValueListenableBuilder<String>(
+          valueListenable: selected,
+          builder: (context, value, _) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.of(context).appLanguage,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
+                  const SizedBox(height: 12),
+                  _LanguageOptionTile(
+                    title: AppStrings.of(context).indonesian,
+                    selected: value == 'id',
+                    onTap: () => selected.value = 'id',
+                  ),
+                  _LanguageOptionTile(
+                    title: AppStrings.of(context).english,
+                    selected: value == 'en',
+                    onTap: () => selected.value = 'en',
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      await ref
+                          .read(appSettingsProvider.notifier)
+                          .setLanguage(selected.value);
+                      if (context.mounted) Navigator.pop(sheetContext);
+                    },
+                    icon: const Icon(Icons.save_outlined),
+                    label: Text(AppStrings.of(context).save),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+  selected.dispose();
+}
+
+class _LanguageOptionTile extends StatelessWidget {
+  const _LanguageOptionTile({
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+      title: Text(title),
+      trailing: Icon(
+        selected ? Icons.check_circle : Icons.circle_outlined,
+        color: selected ? AppColors.primary : AppColors.outline,
+      ),
+    );
+  }
+}
+
+Future<void> _showEditProfileSheet(
+  BuildContext context,
+  WidgetRef ref,
+  AppUser? user,
+) async {
+  if (user == null) return;
+  final nameController = TextEditingController(text: user.fullName);
+  var isSaving = false;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+    ),
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                18,
+                20,
+                MediaQuery.viewInsetsOf(context).bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.of(context).profileEdit,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: AppStrings.of(context).profileName,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            final name = nameController.text.trim();
+                            if (name.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppStrings.of(context).emptyNameError,
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            setState(() => isSaving = true);
+                            final success = await ref
+                                .read(authControllerProvider.notifier)
+                                .updateProfile(
+                                  fullName: name,
+                                );
+                            if (!context.mounted) return;
+                            setState(() => isSaving = false);
+                            if (success) {
+                              await ref
+                                  .read(authControllerProvider.notifier)
+                                  .refreshCurrentUser();
+                              if (!context.mounted) return;
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppStrings.of(context).profileUpdated,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              final message = ref
+                                      .read(authControllerProvider)
+                                      .errorMessage ??
+                                  AppStrings.of(context).profileUpdateFailed;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(message)),
+                              );
+                            }
+                          },
+                    icon: isSaving
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(
+                      AppStrings.of(context)
+                          .tr('Simpan Profil', 'Save Profile'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          );
+        },
+      );
+    },
+  );
+  nameController.dispose();
 }
 
-class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.user});
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.user});
 
   final AppUser? user;
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
     final roleLabel = switch (user?.role) {
-      UserRole.superAdmin => 'Super Admin',
-      UserRole.admin => 'Agency Admin',
-      _ => 'User',
+      UserRole.superAdmin => strings.superAdminLabel,
+      UserRole.admin => strings.adminAgencyLabel,
+      _ => strings.userLabel,
     };
+    final initials = (user?.fullName.isNotEmpty == true)
+        ? user!.fullName[0].toUpperCase()
+        : '?';
 
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.outlineVariant),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
       ),
-      padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: const Icon(Icons.person, color: AppColors.primary, size: 36),
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: AppColors.primaryContainer,
+            child: Text(
+              initials,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user?.fullName ?? 'Guest',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(user?.email ?? '-', style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: 10),
-                    _RoleBadge(text: roleLabel),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _InfoChip(
-              icon: Icons.badge_outlined,
-                label: user?.agencyId == null ? 'No Agency Yet' : 'Agency Linked',
-              ),
-              _InfoChip(
-                icon: Icons.verified_outlined,
-                label: user?.agencyIsActive == false ? 'Inactive' : 'Account Active',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SecurityCard extends StatelessWidget {
-  const _SecurityCard({required this.user, required this.onPressed});
-
-  final AppUser? user;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final lastLogin = DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now().subtract(const Duration(hours: 2)));
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.shield_outlined, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                'Security Status',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 14),
           Text(
-            'Strong',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+            user?.fullName ?? strings.classRentUser,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
-            'Last login: $lastLogin',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+            user?.email ?? strings.emailPlaceholder,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: onPressed,
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.16),
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(user?.role == UserRole.user ? 'Contact Support' : 'Audit History'),
+            child: Text(
+              roleLabel,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
       ),
@@ -274,12 +469,16 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: AppColors.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppColors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+      ),
     );
   }
 }
@@ -288,89 +487,26 @@ class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String title;
-  final String subtitle;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.outlineVariant),
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: NotificationBadge(
+        count: badgeCount,
+        child: Icon(icon, color: AppColors.primary),
       ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: AppColors.primary),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
-}
-
-class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.secondaryContainer.withValues(alpha: 0.24),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: AppColors.secondary,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.outlineVariant),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.primary),
-          const SizedBox(width: 6),
-          Text(label),
-        ],
-      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.outline),
     );
   }
 }
